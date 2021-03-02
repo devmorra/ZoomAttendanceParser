@@ -41,6 +41,10 @@ class Timeframe:
         self.start = start
         self.end = end
         self.duration = end - start
+    def recalcDuration(self):
+        self.duration = self.end - self.start
+    def __lt__(self, other):
+        return self.start < other.start
 
 
 class Attendee:
@@ -70,7 +74,7 @@ class Attendee:
     def addTimeFrame(self, login, logout):
         self.timeframes.append(Timeframe(login, logout))
     def sortTimeFrames(self):
-        self.timeframes = sorted(self.timeframes, key=lambda time: time[0])  # https://docs.python.org/3/howto/sorting.html
+        self.timeframes = sorted(self.timeframes)  # https://docs.python.org/3/howto/sorting.html
     def mergeOverlappingTimeframes(self):
         i = 0
         # check frame 0 and frame 1
@@ -81,39 +85,41 @@ class Attendee:
         while i < len(self.timeframes) - 1:
             # year, month, day, hour, minute, second
             f1 = self.timeframes[i]
-            f1start = f1[0]
-            f1end = f1[1]
+            f1start = f1.start
+            f1end = f1.end
             f2 = self.timeframes[i+1]
-            f2start = f2[0]
-            f2end = f2[1]
+            f2start = f2.start
+            f2end = f2.end
             # if the timeframes overlap
             x = (f2start < f1end)
             y =(f2end > f1end)
             if f2start < f1end:
-                print(f"Merged \n{f1[0].strftime('%H:%M:%S')} - {f1[1].strftime('%H:%M:%S')} with \n{f2[0].strftime('%H:%M:%S')} - {f2[1].strftime('%H:%M:%S')}",end=" ")
+                print(f"Merged \n{f1.start.strftime('%H:%M:%S')} - {f1.end.strftime('%H:%M:%S')} with \n{f2.start.strftime('%H:%M:%S')} - {f2.end.strftime('%H:%M:%S')}",end=" ")
                 if f2end > f1end:
-                    self.timeframes[i][1] = f2end
+                    self.timeframes[i].end = f2end
                 #self.timeframes[i][1] = self.timeframes[i+1][1]
-                print(f"to new frame \n{self.timeframes[i][0].strftime('%H:%M:%S')} - {self.timeframes[i][1].strftime('%H:%M:%S')} for {self.name}")
+                print(f"to new frame \n{self.timeframes[i].start.strftime('%H:%M:%S')} - {self.timeframes[i].end.strftime('%H:%M:%S')} for {self.name}")
+                self.timeframes[i].recalcDuration()
                 del self.timeframes[i+1]
             else:
                 i += 1
 
     def createHumanReadableTFs(self):
         for tf in self.timeframes:
-            self.hrtimeframes.append([tf[0].strftime('%H:%M:%S'),tf[1].strftime('%H:%M:%S')])
+            self.hrtimeframes.append([tf.start.strftime('%H:%M:%S'),tf.end.strftime('%H:%M:%S')])
         for tf in self.timeframescopy:
-            self.hrtimeframescopy.append([tf[0].strftime('%H:%M:%S'),tf[1].strftime('%H:%M:%S')])
+            self.hrtimeframescopy.append([tf.start.strftime('%H:%M:%S'),tf.end.strftime('%H:%M:%S')])
 
     def calculateTimeInCall(self):
         self.sortTimeFrames()
         self.mergeOverlappingTimeframes()
-        self.firstLogin = self.timeframes[0][0]
+        if len(self.timeframes) > 0:
+            self.firstLogin = self.timeframes[0].start
         for timeframe in self.timeframes:
-            a = timeframe[1]
-            b = timeframe[0]
-            tfduration = timeframe[1] - timeframe[0]
-            self.timeInCall += tfduration
+            a = timeframe.end
+            b = timeframe.start
+            tfduration = timeframe.end - timeframe.start
+            self.timeInCall += timeframe.duration
         print(f"{self.name} in call for {self.timeInCall}")
 
         # to check for overlapping logins in the case of multiple devices
