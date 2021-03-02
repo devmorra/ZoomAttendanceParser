@@ -17,7 +17,8 @@ from zoomRequest import Zoom
 
 # SERVICE_ACCOUNT_FILE = f".secrets/{os.listdir('.secrets')[0]}"
 # SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
-
+taliaspath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\test aliases.txt"
+tdatapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\testdata.csv"
 parser = Parser()
 parser.loadAttendeesAndAliasFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt")
 parser.loadMeetDataFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Log 1 no meeting data.csv")
@@ -26,8 +27,8 @@ parser.loadMeetDataFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParse
 # for entry in parser.aliasDictionary:
 #     print(entry)
 for attendee in parser.attendees:
-    attendee.sortTimeFrames()
-    attendee.mergeOverlappingTimeframes()
+    attendee.calculateTimeInCall()
+    attendee.createHumanReadableTFs()
 print(parser.aliasDictionary)
 # if __name__ == "__main__":
 #     zoom = Zoom(ZOOM_API_KEY, ZOOM_API_SECRET)

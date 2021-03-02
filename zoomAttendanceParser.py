@@ -3,7 +3,7 @@ import tkinter as tk
 import csv
 import copy
 import datetime
-from datetime import time
+from datetime import datetime
 from datetime import timedelta
 
 # try:
@@ -36,7 +36,11 @@ from datetime import timedelta
 # >>> potentially send an email to the learners if they're marked late or tardy?
 #
 
-
+class Timeframe:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+        self.duration = end - start
 
 
 class Attendee:
@@ -45,10 +49,12 @@ class Attendee:
         self.aliases = []
         self.lines = []
         self.timeframes = []
+        self.hrtimeframes = []
         self.timeframescopy = []
-        self.timeFormat = "%I:%M:%S"
+        self.hrtimeframescopy = []
+        self.timeFormat = "%m/%d/%Y %I:%M:%S %p"
         self.firstLogin = "HH:MM:SSAM/PM"
-        self.timeInCall = 0
+        self.timeInCall = timedelta()
         self.status = ''  # present, tardy, or absent - should tardy be split between late join and missing > threshold?
 
     def loadFromLine(self, line):
@@ -62,7 +68,7 @@ class Attendee:
             self.aliases.append(alias)
         self.aliases.append(self.name.lower())
     def addTimeFrame(self, login, logout):
-        self.timeframes.append([login, logout])
+        self.timeframes.append(Timeframe(login, logout))
     def sortTimeFrames(self):
         self.timeframes = sorted(self.timeframes, key=lambda time: time[0])  # https://docs.python.org/3/howto/sorting.html
     def mergeOverlappingTimeframes(self):
@@ -72,7 +78,7 @@ class Attendee:
         # if not merged, move to checking frame 1 and 2
         # repeat
         self.timeframescopy = copy.deepcopy(self.timeframes)
-        while i < len(self.timeframes) - 1:  # not sure if this is the correct criteria, we'll see
+        while i < len(self.timeframes) - 1:
             # year, month, day, hour, minute, second
             f1 = self.timeframes[i]
             f1start = f1[0]
@@ -80,19 +86,35 @@ class Attendee:
             f2 = self.timeframes[i+1]
             f2start = f2[0]
             f2end = f2[1]
-            if f2start < f1end and f2end > f1end:  # if the timeframes overlap and frame 2's end is further than f1's end
-                print(f"Merged {f1} with {f2}",end=" ")
-                self.timeframes[i][1] = self.timeframes[i+1][1]
-                print(f"to new frame {self.timeframes[i]} for {self.name}")
+            # if the timeframes overlap
+            x = (f2start < f1end)
+            y =(f2end > f1end)
+            if f2start < f1end:
+                print(f"Merged \n{f1[0].strftime('%H:%M:%S')} - {f1[1].strftime('%H:%M:%S')} with \n{f2[0].strftime('%H:%M:%S')} - {f2[1].strftime('%H:%M:%S')}",end=" ")
+                if f2end > f1end:
+                    self.timeframes[i][1] = f2end
+                #self.timeframes[i][1] = self.timeframes[i+1][1]
+                print(f"to new frame \n{self.timeframes[i][0].strftime('%H:%M:%S')} - {self.timeframes[i][1].strftime('%H:%M:%S')} for {self.name}")
                 del self.timeframes[i+1]
             else:
                 i += 1
 
+    def createHumanReadableTFs(self):
+        for tf in self.timeframes:
+            self.hrtimeframes.append([tf[0].strftime('%H:%M:%S'),tf[1].strftime('%H:%M:%S')])
+        for tf in self.timeframescopy:
+            self.hrtimeframescopy.append([tf[0].strftime('%H:%M:%S'),tf[1].strftime('%H:%M:%S')])
 
     def calculateTimeInCall(self):
-        # self.mergeOverlappingTimeframes(self)
-        pass
-
+        self.sortTimeFrames()
+        self.mergeOverlappingTimeframes()
+        self.firstLogin = self.timeframes[0][0]
+        for timeframe in self.timeframes:
+            a = timeframe[1]
+            b = timeframe[0]
+            tfduration = timeframe[1] - timeframe[0]
+            self.timeInCall += tfduration
+        print(f"{self.name} in call for {self.timeInCall}")
 
         # to check for overlapping logins in the case of multiple devices
         # store all login ranges, sort them by start time
@@ -129,7 +151,7 @@ class Parser:
         self.attendees = []
         self.unknown = []
         self.aliasDictionary = {}
-        self.timeFormat = "%I:%M:%S"
+        self.timeFormat = "%m/%d/%Y %I:%M:%S %p"
     def readCSV(self, path):
         with open(path, newline='') as csvfile:
             dialect = csv.Sniffer().sniff(csvfile.read(1024))
@@ -165,12 +187,16 @@ class Parser:
             if splitline[5] == "Yes\n" or splitline[5] == "Yes":  # only track attendance for guests, not hosts
                 alias = splitline[0].lower()
                 # grab only the "HH:MM:SS AM/PM"
-                loginTime = datetime.datetime.strptime(splitline[2].split(" ")[1], self.timeFormat).time() # gross
-                if splitline[2].split(" ")[2] == "PM":
-                    loginTime = time(loginTime.hour+12,loginTime.minute,loginTime.second)
-                logoutTime = datetime.datetime.strptime(splitline[3].split(" ")[1], self.timeFormat).time()#  + splitline[3].split(" ")[2]
-                if splitline[3].split(" ")[2] == "PM":
-                    logoutTime = time(logoutTime.hour+12,logoutTime.minute,logoutTime.second)
+                loginTime = datetime.strptime(splitline[2], self.timeFormat)
+                logoutTime = datetime.strptime(splitline[3], self.timeFormat)
+                # if splitline[2].split(" ")[2] == "PM":
+                #     loginTime = datetime.strptime(splitline[2].split(" ")[1], self.timeFormat)
+                # else:
+                #     loginTime = datetime.strptime(splitline[2].split(" ")[1], self.timeFormat)
+                # if splitline[3].split(" ")[2] == "PM":
+                #     logoutTime = datetime.strptime(splitline[3].split(" ")[1], self.timeFormat)
+                # else:
+                #     logoutTime = datetime.strptime(splitline[3].split(" ")[1], self.timeFormat)
 
                 recognizedPair = self.recognizedAlias(alias) # this is kinda weird and ugly
                 if recognizedPair[0]:
@@ -192,11 +218,3 @@ class Parser:
     # class MainApplication(tk.Frame):
     #     def __init__(self, parent, *args, **kwargs):
     #         tk.Frame.__init__(self, parent, *args, **kwargs)
-    def calcInClassTime(self, attendee):
-        # subtract break times and lunch from their attendance time as some learners log out during those times especially lunch
-        # if the learner logs in past the class start time plus a leniency threshold, mark tardy
-        # if the learner logs less than a threshold of minutes during the whole call, mark absent
-        # if the learner's time attended is beneath the duration of the meeting minus a tardy leniency threshold, mark tardy
-        # >>> potentially send an email to the learners if they're marked late or tardy?
-        #for line in attendee.lines
-        pass
