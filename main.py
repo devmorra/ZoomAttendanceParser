@@ -20,10 +20,14 @@ from zoomRequest import Zoom
 
 parser = Parser()
 parser.loadAttendeesAndAliasFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt")
+parser.loadMeetDataFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Log 1 no meeting data.csv")
 # for attendee in parser.attendees:
 #     print(attendee.aliases)
 # for entry in parser.aliasDictionary:
 #     print(entry)
+for attendee in parser.attendees:
+    attendee.sortTimeFrames()
+    attendee.mergeOverlappingTimeframes()
 print(parser.aliasDictionary)
 # if __name__ == "__main__":
 #     zoom = Zoom(ZOOM_API_KEY, ZOOM_API_SECRET)
