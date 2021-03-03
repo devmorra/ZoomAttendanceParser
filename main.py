@@ -1,27 +1,41 @@
 # taken/adapted from https://github.com/billydh/zoom-reporting/blob/master/main.py
 
-import os
-from typing import List
+# import os
+import sys
+# from typing import List
 
-import pandas as pd
-from pandas import DataFrame
-from requests import Response
+# import pandas as pd
+# from pandas import DataFrame
+# from requests import Response
 from zoomAttendanceParser import Parser  # , Attendee
 
 #from googl import Googl
-from zoomRequest import Zoom
+# from zoomRequest import Zoom
 
 #ZOOM_API_KEY = # os.environ.get("ZOOM_API_KEY")
 #ZOOM_API_SECRET = # os.environ.get("ZOOM_API_SECRET")
 #ZOOM_MEETING_ID = # os.environ.get("ZOOM_MEETING_ID")
 
+try:
+    tdatapath = r'{}'.format(sys.argv[1])
+except IndexError:
+    print("Please drag and drop the attendance ")
+    datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\log 2.csv"
+print(datapath)
+#readCSV(droppedFile)
+
 # SERVICE_ACCOUNT_FILE = f".secrets/{os.listdir('.secrets')[0]}"
 # SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
 taliaspath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\test aliases.txt"
-tdatapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\testdata.csv"
-parser = Parser()
+timeFormat = "%m/%d/%Y %I:%M:%S %p"
+parser = Parser("%m/%d/%Y %I:%M:%S %p")
 parser.loadAttendeesAndAliasFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt")
-parser.loadMeetDataFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Log 1 no meeting data.csv")
+#try:
+parser.loadMeetDataFromPath(datapath)
+# except IndexError as e:
+#     print(e)
+#     print("OH NO")
+#     print(droppedFile)
 # for attendee in parser.attendees:
 #     print(attendee.aliases)
 # for entry in parser.aliasDictionary:
@@ -29,7 +43,10 @@ parser.loadMeetDataFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParse
 for attendee in parser.attendees:
     attendee.calculateTimeInCall()
     attendee.createHumanReadableTFs()
-print(parser.aliasDictionary)
+    print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}")
+# print(parser.aliasDictionary)
+input("")
+input("")
 # if __name__ == "__main__":
 #     zoom = Zoom(ZOOM_API_KEY, ZOOM_API_SECRET)
 #
