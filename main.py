@@ -9,7 +9,7 @@ import sys
 # from requests import Response
 from zoomAttendanceParser import Parser  # , Attendee
 
-#from googl import Googl
+# from googl import Googl
 # from zoomRequest import Zoom
 
 #ZOOM_API_KEY = # os.environ.get("ZOOM_API_KEY")
@@ -43,7 +43,7 @@ parser = Parser(timeFormat, meetData, aliasData)
 for attendee in parser.attendees:
     attendee.calculateTimeInCall()
     attendee.createHumanReadableTFs()
-    print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}")
+    print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}, left at {attendee.lastLogoff}")
 # print(parser.aliasDictionary)
 input("")
 input("")
@@ -79,14 +79,14 @@ input("")
 #     meeting_date: str = output_df.join_time.tolist()[0].split(" ")[0]
 
     # output_file: str = f"zoom_report_{meeting_date}"
-
+    #
     # googl = Googl(SERVICE_ACCOUNT_FILE, SCOPES)
-
+    #
     # zoom_folder_id: str = googl.get_folder_id("Zoom")
     # sheet_id = googl.create_new_sheet(output_file, zoom_folder_id)
     # result = googl.insert_df_to_sheet(sheet_id, output_df)
     # sheet_link = googl.get_sheet_link(result.get("spreadsheetId"))
-
+    #
     # print(f"Finished uploading Zoom report.\n"
     #      f"spreadsheetId: {result.get('updates').get('spreadsheetId')}\n"
     #      f"updatedRange: {result.get('updates').get('updatedRange')}\n"
