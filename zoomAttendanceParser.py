@@ -35,8 +35,13 @@ class Timeframe:
         self.start = start
         self.end = end
         self.duration = end - start
+        self.isValid = True
+
+
     def recalcDuration(self):
         self.duration = self.end - self.start
+
+
     def __lt__(self, other):
         # used for sorting the timeframes
         return self.start < other.start
@@ -56,6 +61,22 @@ class Attendee:
         self.firstLogin = "HH:MM:SSAM/PM"
         self.timeInCall = timedelta()
         self.status = ''  # present, tardy, or absent - should tardy be split between late join and missing > threshold?
+
+
+    def removeBreakOverlaps(self, breaks):
+        # calling timeframes sessions here
+        # if a session overlaps a break
+        # case 1: no overlap, session remain untouched
+        # case 2: break contained entirely within session, split session into 2 sessions
+        # session 1: original start - break start
+        # session 2: break end - original end
+        # case 3: session tail end overlaps with break
+        # session start untouched, session end = break start
+        # case 4: session entirely within a break
+        #
+        # if breakStart > tfStart and
+        pass
+
 
     def loadFromLine(self, line):
         splitLine = line.split("=")
@@ -82,7 +103,7 @@ class Attendee:
         # if merged, remove old frame 1, check frame 0 and new frame 1
         # if not merged, move to checking frame 1 and 2
         # repeat
-        self.timeframescopy = copy.deepcopy(self.timeframes)
+        self.timeframescopy = copy.deepcopy(self.timeframes)  # debug
         while i < len(self.timeframes) - 1:
             # year, month, day, hour, minute, second
             f1 = self.timeframes[i]
@@ -92,8 +113,6 @@ class Attendee:
             f2start = f2.start
             f2end = f2.end
             # if the timeframes overlap
-            x = (f2start < f1end)
-            y =(f2end > f1end)
             if f2start < f1end:
                 # print(f"Merged \n{f1.start.strftime('%H:%M:%S')} - {f1.end.strftime('%H:%M:%S')} with
                 # \n{f2.start.strftime('%H:%M:%S')} - {f2.end.strftime('%H:%M:%S')}",end=" ")
@@ -120,10 +139,8 @@ class Attendee:
         if len(self.timeframes) > 0:
             self.firstLogin = self.timeframes[0].start
         for timeframe in self.timeframes:
-            # a = timeframe.end
-            # b = timeframe.start
-            # tfduration = timeframe.end - timeframe.start
-            self.timeInCall += timeframe.duration
+            if timeframe.isValid == True:
+                self.timeInCall += timeframe.duration
 
     # unused?
     def setLines(self, lines):
@@ -139,16 +156,88 @@ class Parser:
     def __main__(self):
         pass
 
-    def __init__(self, timeFormat):
+    def __init__(self, timeFormat, meetingdata, aliasdata):
         self.attendees = []
         self.unrecognizedAttendees = []
-        self.aliasDictionary = {}
+        self.breaks = []
+        self.logDate = ''
         self.timeFormat = timeFormat
-    def readCSV(self, path):
-        with open(path, newline='') as csvfile:
-            dialect = csv.Sniffer().sniff(csvfile.read(1024))
-            csvfile.seek(0)
-            reader = csv.reader(csvfile,dialect)
+        self.aliasDictionary = {}
+
+        self.lateArrivalLeniency = 0
+        self.earlyLeaveLeniency = 0
+        self.breakReturnLeniency = 0
+        self.startTime = ''
+        self.endTime = ''
+
+        self.loadAliasData(aliasdata)
+        self.loadMeetingData(meetingdata)
+        self.loadBreaks()
+
+    def loadBreaks(self):
+        # hard coded for now
+        # in the future it should be pulled from google sheets cells
+        breakformat = "%I:%M:%S %p"
+        # manual data for now
+        break1 = Timeframe(datetime.strptime("10:30:00 AM", breakformat), datetime.strptime("10:45:00 AM", breakformat))
+        break2 = Timeframe(datetime.strptime("12:30:00 PM", breakformat), datetime.strptime("01:35:00 PM", breakformat))
+        break3 = Timeframe(datetime.strptime("02:30:00 PM", breakformat), datetime.strptime("02:45:00 PM", breakformat))
+        self.breaks.append(break1)
+        self.breaks.append(break2)
+        self.breaks.append(break3)
+
+    # def readCSV(self, path):
+    #     with open(path, newline='') as csvfile:
+    #         dialect = csv.Sniffer().sniff(csvfile.read(1024))
+    #         csvfile.seek(0)
+    #         reader = csv.reader(csvfile,dialect)
+
+    def loadAliasData(self, data):
+        for line in data:
+            a = Attendee(self.timeFormat, self)
+            a.loadFromLine(line)
+            self.attendees.append(a)
+            for alias in a.aliases:
+                self.aliasDictionary[alias] = a
+
+    def loadMeetingData(self, data):  # load lines and remove the first line which doesn't contain useful data
+        if "Meeting ID" in data[0]:
+            self.logDate = datetime.strptime(data[1].split(",")[2], self.timeFormat)
+        userDataStart = 0
+        for line in data:
+            if "Name (Original Name)" in line:
+                break
+            userDataStart += 1
+        if self.logDate == '':
+            self.logDate = datetime.strptime(data[userDataStart + 1].split(",")[2], self.timeFormat)
+        sessions = data[userDataStart:]
+        for line in sessions:
+            # in the meeting file:
+            # [0] = Attendee alias
+            # [1] = email, if applicable
+            # [2] = login time
+            # [3] = logout time
+            # [4] = time in minutes
+            # [5] = Host or not, no = host/co-host, yes = attendee
+            splitline = line.split(",")
+            if splitline[5] == "Yes\n" or splitline[5] == "Yes":  # only track attendance for guests, not hosts
+                alias = splitline[0].lower()
+                # grab only the "HH:MM:SS AM/PM"
+                loginTime = datetime.strptime(splitline[2], self.timeFormat)
+                logoutTime = datetime.strptime(splitline[3], self.timeFormat)
+                recognizedPair = self.recognizedAlias(alias)  # grabs if the alias is recognized or not and what the a
+                if recognizedPair[0]:
+                    self.aliasDictionary[recognizedPair[1]].addTimeFrame(loginTime, logoutTime)
+                else:
+                    # track unrecognized alias and its timeframe
+                    uAttendee = Attendee(self.timeFormat, self)
+                    uAttendee.name = alias
+                    if alias not in uAttendee.aliases:
+                        uAttendee.aliases.append(alias)
+                    uAttendee.addTimeFrame(loginTime, logoutTime)
+                    self.aliasDictionary[alias] = uAttendee
+                    self.unrecognizedAttendees.append(uAttendee)
+
     def loadAttendeesAndAliasFromPath(self, path):
         # read list of learners and their aliases from a file, potentially from salesforce later (probably not)
         # stores attendees in self.attendees
@@ -200,14 +289,16 @@ class Parser:
                     uAttendee.name = alias
                     self.aliasDictionary[alias] = uAttendee
                     self.unrecognizedAttendees.append(uAttendee)
+
     def recognizedAlias(self, alias):
         for a in self.aliasDictionary:
+            # matches partial aliases ex: Aliases "John" and "Doe" would both recognize "John Doe"
             if a in alias:
                 return [True, a]
         return [False, "unrecognized"]
 
 
-    # interaction will probably be done through google sheets
+    # interaction will probably be done through google sheets instead of a GUI application
     # class MainApplication(tk.Frame):
     #     def __init__(self, parent, *args, **kwargs):
     #         tk.Frame.__init__(self, parent, *args, **kwargs)

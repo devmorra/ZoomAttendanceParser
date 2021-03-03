@@ -20,18 +20,18 @@ try:
     tdatapath = r'{}'.format(sys.argv[1])
 except IndexError:
     print("Please drag and drop the attendance ")
-    datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\log 2.csv"
+    datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Log 1 no meeting data.csv"
 print(datapath)
 #readCSV(droppedFile)
 
 # SERVICE_ACCOUNT_FILE = f".secrets/{os.listdir('.secrets')[0]}"
 # SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
+aliaspath =  r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt"
 taliaspath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\test aliases.txt"
 timeFormat = "%m/%d/%Y %I:%M:%S %p"
-parser = Parser("%m/%d/%Y %I:%M:%S %p")
-parser.loadAttendeesAndAliasFromPath(r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt")
-#try:
-parser.loadMeetDataFromPath(datapath)
+aliasData = open(aliaspath, "r").readlines()
+meetData = open(datapath, "r").readlines()
+parser = Parser(timeFormat, meetData, aliasData)
 # except IndexError as e:
 #     print(e)
 #     print("OH NO")
