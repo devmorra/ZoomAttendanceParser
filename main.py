@@ -9,6 +9,8 @@ import sys
 # from requests import Response
 from zoomAttendanceParser import Parser  # , Attendee
 
+# from timeit import default_timer as timer
+
 # from googl import Googl
 # from zoomRequest import Zoom
 
@@ -16,22 +18,27 @@ from zoomAttendanceParser import Parser  # , Attendee
 #ZOOM_API_SECRET = # os.environ.get("ZOOM_API_SECRET")
 #ZOOM_MEETING_ID = # os.environ.get("ZOOM_MEETING_ID")
 
-try:
-    tdatapath = r'{}'.format(sys.argv[1])
-except IndexError:
-    print("Please drag and drop the attendance ")
-    datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Log 1 no meeting data.csv"
-print(datapath)
-#readCSV(droppedFile)
-
 # SERVICE_ACCOUNT_FILE = f".secrets/{os.listdir('.secrets')[0]}"
 # SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
+# start = timer()
+# try:
+#     tdatapath = r'{}'.format(sys.argv[1])
+# except IndexError:
+#     print("Please drag and drop the attendance ")
+#     datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\log 3.csv"
+# print(datapath)
+
+
+# hardcoded files for now, will be changed to pull from google sheets/zoom API
+datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\log 3.csv"
 aliaspath =  r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt"
 taliaspath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\test aliases.txt"
 timeFormat = "%m/%d/%Y %I:%M:%S %p"
+startTime = "03/03/2021 09:00:00 AM"
+endTime = "03/03/2021 04:00:00 PM"
 aliasData = open(aliaspath, "r").readlines()
 meetData = open(datapath, "r").readlines()
-parser = Parser(timeFormat, meetData, aliasData)
+parser = Parser(timeFormat, meetData, aliasData, startTime, endTime)
 # except IndexError as e:
 #     print(e)
 #     print("OH NO")
@@ -44,7 +51,9 @@ for attendee in parser.attendees:
     attendee.calculateTimeInCall()
     attendee.createHumanReadableTFs()
     print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}, left at {attendee.lastLogoff}")
-# print(parser.aliasDictionary)
+print(parser.aliasDictionary)
+# end = timer()
+# print(end - start)
 input("")
 input("")
 # if __name__ == "__main__":
