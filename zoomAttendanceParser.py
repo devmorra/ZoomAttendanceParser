@@ -115,6 +115,14 @@ class Attendee:
                 i += 1
         pass
 
+
+    def loadFromList(self, glist):
+        # used for loading from google sheet response
+        self.name = glist[0]
+        for ele in glist:
+            self.aliases.append(ele.lower())
+
+
     def loadFromLine(self, line: str):
         splitLine = line.split("=")
         self.name = splitLine[0]
@@ -221,7 +229,7 @@ class Parser:
         self.breakReturnLeniency = 0
         self.startTime = datetime.strptime(startTime, timeFormat)
         self.endTime = datetime.strptime(endTime, timeFormat)
-
+        print(aliasdata)
         self.loadAliasData(aliasdata)
         self.loadMeetingData(meetingdata)
         self.loadBreaks()
@@ -243,12 +251,19 @@ class Parser:
 
 
     def loadAliasData(self, data: [str]):
-        for line in data:
+        for aliasList in data:
             a = Attendee(self.timeFormat, self)
-            a.loadFromLine(line)
+            a.loadFromList(aliasList)
             self.attendees.append(a)
             for alias in a.aliases:
                 self.aliasDictionary[alias] = a
+
+        # for line in data:
+        #     a = Attendee(self.timeFormat, self)
+        #     a.loadFromLine(line)
+        #     self.attendees.append(a)
+        #     for alias in a.aliases:
+        #         self.aliasDictionary[alias] = a
 
     def loadMeetingData(self, data: [str]):  # load lines and remove the first line which doesn't contain useful data
         if "Meeting ID" in data[0]:

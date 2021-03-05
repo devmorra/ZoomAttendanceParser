@@ -8,7 +8,7 @@ import sys
 # from pandas import DataFrame
 # from requests import Response
 from zoomAttendanceParser import Parser  # , Attendee
-
+from googleSheetsHandler import GoogleSheetsHandler
 # from timeit import default_timer as timer
 
 # from googl import Googl
@@ -36,7 +36,10 @@ taliaspath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\test ali
 timeFormat = "%m/%d/%Y %I:%M:%S %p"
 startTime = "03/03/2021 09:00:00 AM"
 endTime = "03/03/2021 04:00:00 PM"
-aliasData = open(aliaspath, "r").readlines()
+# aliasData = open(aliaspath, "r").readlines()
+
+gsh = GoogleSheetsHandler()
+aliasData = gsh.getAttendeesAndAliasData('1aWsTfpukYF-NcFKE_RFZ9J6pOnyb1fDHAHavdDHERFQ')
 meetData = open(datapath, "r").readlines()
 parser = Parser(timeFormat, meetData, aliasData, startTime, endTime)
 # except IndexError as e:
@@ -51,7 +54,7 @@ for attendee in parser.attendees:
     attendee.calculateTimeInCall()
     attendee.createHumanReadableTFs()
     print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}, left at {attendee.lastLogoff}")
-print(parser.aliasDictionary)
+#print(parser.aliasDictionary)
 # end = timer()
 # print(end - start)
 input("")
