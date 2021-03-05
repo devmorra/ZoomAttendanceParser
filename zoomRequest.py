@@ -7,7 +7,7 @@ from authlib.jose import jwt
 from requests import Response
 
 
-class Zoom:
+class ZoomRequester:
     def __init__(self, api_key: str, api_secret: str):
         self.api_key = api_key
         self.api_secret = api_secret
@@ -15,8 +15,19 @@ class Zoom:
         self.reports_url = f"{self.base_url}/report/meetings"
         self.jwt_token_exp = 1800
         self.jwt_token_algo = "HS256"
+        self.jwt_token = self.generate_jwt_token()
 
-    def get_meeting_participants(self, meeting_id: str, jwt_token: bytes,
+
+    def genericAPICall(self, endpoint, query_params, next_page_token: Optional[str] = None):
+        url = f"{self.base_url}{endpoint}"
+
+
+    def getMeetingID(self, meetingID):
+        url: str = f"{self.base_url}/meetings/{meetingID}"
+
+
+
+    def get_meeting_participants(self, meeting_id: str,
                                  next_page_token: Optional[str] = None) -> Response:
         # colons are variable annotations, sort of like giving an expected typing to the var
         url: str = f"{self.reports_url}/{meeting_id}/participants"
@@ -25,7 +36,7 @@ class Zoom:
             query_params.update({"next_page_token": next_page_token})
 
         r: Response = requests.get(url,
-                                   headers={"Authorization": f"Bearer {jwt_token.decode('utf-8')}"},
+                                   headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"},
                                    params=query_params)
 
         return r

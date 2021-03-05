@@ -1,18 +1,12 @@
 # taken/adapted from https://github.com/billydh/zoom-reporting/blob/master/main.py
 
-# import os
-import sys
-# from typing import List
-
-# import pandas as pd
-# from pandas import DataFrame
-# from requests import Response
 from zoomAttendanceParser import Parser  # , Attendee
 from googleSheetsHandler import GoogleSheetsHandler
+import os
 # from timeit import default_timer as timer
 
 # from googl import Googl
-# from zoomRequest import Zoom
+from zoomRequest import ZoomRequester
 
 #ZOOM_API_KEY = # os.environ.get("ZOOM_API_KEY")
 #ZOOM_API_SECRET = # os.environ.get("ZOOM_API_SECRET")
@@ -31,29 +25,42 @@ from googleSheetsHandler import GoogleSheetsHandler
 
 # hardcoded files for now, will be changed to pull from google sheets/zoom API
 datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\log 3.csv"
-aliaspath =  r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\Learners with aliases.txt"
-taliaspath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\test aliases.txt"
 timeFormat = "%m/%d/%Y %I:%M:%S %p"
-startTime = "03/03/2021 09:00:00 AM"
-endTime = "03/03/2021 04:00:00 PM"
-# aliasData = open(aliaspath, "r").readlines()
+timeFormat = "%Y-%m-%dT%H:%M:%SZ"
+startTime = "2021-03-03T09:00:00Z"
+endTime = "2021-03-03T16:00:00Z"
 
+secretContents = open(os.path.abspath("zoomSecrets.txt")).read().split(",")
 gsh = GoogleSheetsHandler()
-aliasData = gsh.getAttendeesAndAliasData('1aWsTfpukYF-NcFKE_RFZ9J6pOnyb1fDHAHavdDHERFQ')
-meetData = open(datapath, "r").readlines()
-parser = Parser(timeFormat, meetData, aliasData, startTime, endTime)
-# except IndexError as e:
-#     print(e)
-#     print("OH NO")
-#     print(droppedFile)
-# for attendee in parser.attendees:
-#     print(attendee.aliases)
-# for entry in parser.aliasDictionary:
-#     print(entry)
+z = ZoomRequester(secretContents[0], secretContents[1])
+# gsh.openSheet('1aWsTfpukYF-NcFKE_RFZ9J6pOnyb1fDHAHavdDHERFQ')
+# gsh get spreadsheet ID's to process from master sheet
+# for spreadsheetID in IDs:
+spreadsheetID = '1aWsTfpukYF-NcFKE_RFZ9J6pOnyb1fDHAHavdDHERFQ'
+aliasData = gsh.getAttendeesAndAliasData(spreadsheetID)
+meetingID = gsh.getSheetData(spreadsheetID, "Settings", "A2")[0][0].replace(" ", "")
+# grab meeting data from zoom
+ztoken = z.generate_jwt_token()
+#meetData = open(datapath, "r").readlines()
+meetResponse = z.get_meeting_participants(meetingID)
+print(meetResponse)
+# grab parser settings from settings sheet
+parser = Parser(timeFormat, aliasData, startTime, endTime)
+parser.parseMeetingResponse(meetResponse)
+# maybe move this to the parser as self.parse()
 for attendee in parser.attendees:
     attendee.calculateTimeInCall()
-    attendee.createHumanReadableTFs()
     print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}, left at {attendee.lastLogoff}")
+# parser.formatDataForCells
+# spreadsheet based on week
+# if the spreadsheet doesn't exist, make it
+# worksheet based on data
+# if the worksheet doesn't exist (it probably doesn't), add it
+# gsh.updateCellData(spreadsheet, worksheet, data)
+# https://gspread.readthedocs.io/en/latest/api.html#gspread.models.Worksheet.update_cells
+
+    #attendee.createHumanReadableTFs()
+#     print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}, left at {attendee.lastLogoff}")
 #print(parser.aliasDictionary)
 # end = timer()
 # print(end - start)

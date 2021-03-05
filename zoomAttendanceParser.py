@@ -1,6 +1,5 @@
 import sys
-import tkinter as tk
-import csv
+import json
 import copy
 import datetime
 from datetime import datetime
@@ -211,7 +210,7 @@ class Parser:
     def __main__(self):
         pass
 
-    def __init__(self, timeFormat: str, meetingdata: [str], aliasdata: [str], startTime: datetime, endTime: datetime):
+    def __init__(self, timeFormat: str, aliasdata: [str], startTime: datetime, endTime: datetime):
         # meetingdata and aliasdata are currently expected to be a list of lines of text, provided from readlines()
         # if this changes to be bulk data I'll have to refactor to have the separating done here or something
         # splitMeetDataToLines(meetingdata)
@@ -229,10 +228,32 @@ class Parser:
         self.breakReturnLeniency = 0
         self.startTime = datetime.strptime(startTime, timeFormat)
         self.endTime = datetime.strptime(endTime, timeFormat)
-        print(aliasdata)
+        # print(aliasdata)
         self.loadAliasData(aliasdata)
-        self.loadMeetingData(meetingdata)
+        # self.parseMeetingResponse(meetingResponse)
+        # self.loadMeetingData(meetingdata)
         self.loadBreaks()
+
+
+    def parseMeetingResponse(self, meetingResponse):
+        meetingData = json.loads(meetingResponse.text)["participants"]
+        for dict in meetingData:
+            alias = dict["name"].lower()
+            # grab only the "HH:MM:SS AM/PM"
+            loginTime = datetime.strptime(dict["join_time"], self.timeFormat)
+            logoutTime = datetime.strptime(dict["leave_time"], self.timeFormat)
+            recognizedPair = self.recognizedAlias(alias)  # grabs if the alias is recognized or not and what the a
+            if recognizedPair[0]:
+                self.aliasDictionary[recognizedPair[1]].addTimeFrame(loginTime, logoutTime)
+            else:
+               # track unrecognized alias and its timeframe
+                uAttendee = Attendee(self.timeFormat, self)
+                uAttendee.name = alias
+                if alias not in uAttendee.aliases:
+                    uAttendee.aliases.append(alias)
+                uAttendee.addTimeFrame(loginTime, logoutTime)
+                self.aliasDictionary[alias] = uAttendee
+                self.unrecognizedAttendees.append(uAttendee)
 
     def loadBreaks(self):
         # hard coded for now
