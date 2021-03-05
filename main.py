@@ -27,8 +27,8 @@ from zoomRequest import ZoomRequester
 datapath = r"C:\Users\Chris\PycharmProjects\ZoomAttendanceParser\logs\log 3.csv"
 timeFormat = "%m/%d/%Y %I:%M:%S %p"
 timeFormat = "%Y-%m-%dT%H:%M:%SZ"
-startTime = "2021-03-03T09:00:00Z"
-endTime = "2021-03-03T16:00:00Z"
+startTime = "2021-03-04T09:00:00Z"
+endTime = "2021-03-04T16:00:00Z"
 
 secretContents = open(os.path.abspath("zoomSecrets.txt")).read().split(",")
 gsh = GoogleSheetsHandler()
@@ -38,15 +38,17 @@ z = ZoomRequester(secretContents[0], secretContents[1])
 # for spreadsheetID in IDs:
 spreadsheetID = '1aWsTfpukYF-NcFKE_RFZ9J6pOnyb1fDHAHavdDHERFQ'
 aliasData = gsh.getAttendeesAndAliasData(spreadsheetID)
-meetingID = gsh.getSheetData(spreadsheetID, "Settings", "A2")[0][0].replace(" ", "")
+meetingID = gsh.getCellData(spreadsheetID, "Settings", "A2").replace(" ", "")
 # grab meeting data from zoom
 ztoken = z.generate_jwt_token()
 #meetData = open(datapath, "r").readlines()
-meetResponse = z.get_meeting_participants(meetingID)
-print(meetResponse)
+timeZoneOffset = int(gsh.getCellData(spreadsheetID,"Settings", "C9"))
 # grab parser settings from settings sheet
-parser = Parser(timeFormat, aliasData, startTime, endTime)
+parser = Parser(timeFormat, timeZoneOffset, aliasData)
+meetResponse = z.get_meeting_participants(meetingID)
 parser.parseMeetingResponse(meetResponse)
+sebDict = gsh.getStartEndBreakDict(spreadsheetID, parser.logDate)
+parser.loadStartEndBreakDict(sebDict)
 # maybe move this to the parser as self.parse()
 for attendee in parser.attendees:
     attendee.calculateTimeInCall()

@@ -4,6 +4,9 @@ import copy
 import datetime
 from datetime import datetime
 from datetime import timedelta
+from datetime import date
+from datetime import time
+from datetime import timezone
 
 
 # end-goal - have Zoom API export meeting reports to S3 bucket
@@ -210,7 +213,7 @@ class Parser:
     def __main__(self):
         pass
 
-    def __init__(self, timeFormat: str, aliasdata: [str], startTime: datetime, endTime: datetime):
+    def __init__(self, timeFormat: str, timeZoneOffset, aliasdata: [str]):
         # meetingdata and aliasdata are currently expected to be a list of lines of text, provided from readlines()
         # if this changes to be bulk data I'll have to refactor to have the separating done here or something
         # splitMeetDataToLines(meetingdata)
@@ -221,18 +224,19 @@ class Parser:
         self.breaks = []
         self.logDate = ''
         self.timeFormat = timeFormat
+        self.timezoneOffset = timedelta(hours=timeZoneOffset)
         self.aliasDictionary = {}
 
         self.lateArrivalLeniency = 0
         self.earlyLeaveLeniency = 0
         self.breakReturnLeniency = 0
-        self.startTime = datetime.strptime(startTime, timeFormat)
-        self.endTime = datetime.strptime(endTime, timeFormat)
+        self.startTime = None  # datetime.strptime(startTime, timeFormat)
+        self.endTime = None    # datetime.strptime(endTime, timeFormat)
         # print(aliasdata)
         self.loadAliasData(aliasdata)
         # self.parseMeetingResponse(meetingResponse)
         # self.loadMeetingData(meetingdata)
-        self.loadBreaks()
+        # self.loadBreaks()
 
 
     def parseMeetingResponse(self, meetingResponse):
@@ -241,7 +245,9 @@ class Parser:
             alias = dict["name"].lower()
             # grab only the "HH:MM:SS AM/PM"
             loginTime = datetime.strptime(dict["join_time"], self.timeFormat)
+            loginTime += self.timezoneOffset
             logoutTime = datetime.strptime(dict["leave_time"], self.timeFormat)
+            logoutTime += self.timezoneOffset
             recognizedPair = self.recognizedAlias(alias)  # grabs if the alias is recognized or not and what the a
             if recognizedPair[0]:
                 self.aliasDictionary[recognizedPair[1]].addTimeFrame(loginTime, logoutTime)
@@ -254,22 +260,38 @@ class Parser:
                 uAttendee.addTimeFrame(loginTime, logoutTime)
                 self.aliasDictionary[alias] = uAttendee
                 self.unrecognizedAttendees.append(uAttendee)
+        arbitraryLogin = meetingData[0]['join_time']  # just grab the first login of the file, after it's been adjusted
+        self.logDate = date.fromisoformat(arbitraryLogin.split("T")[0])  # use date to combine with break time objects
+        # self.logDoW = self.logDate.weekday()
 
     def loadBreaks(self):
         # hard coded for now
         # in the future it should be pulled from google sheets cells
         breakformat = "%m/%d/%Y %I:%M:%S %p"
         # manual data for now
-        break1 = Timeframe(datetime.strptime("03/03/2021 10:30:00 AM", breakformat),
-                           datetime.strptime("03/03/2021 10:45:00 AM", breakformat))
-        break2 = Timeframe(datetime.strptime("03/03/2021 12:30:00 PM", breakformat),
-                           datetime.strptime("03/03/2021 01:35:00 PM", breakformat))
-        break3 = Timeframe(datetime.strptime("03/03/2021 02:30:00 PM", breakformat),
-                           datetime.strptime("03/03/2021 02:45:00 PM", breakformat))
+        break1 = Timeframe(datetime.strptime("03/04/2021 10:30:00 AM", breakformat),
+                           datetime.strptime("03/04/2021 10:45:00 AM", breakformat))
+        break2 = Timeframe(datetime.strptime("03/04/2021 12:30:00 PM", breakformat),
+                           datetime.strptime("03/04/2021 01:35:00 PM", breakformat))
+        break3 = Timeframe(datetime.strptime("03/04/2021 02:30:00 PM", breakformat),
+                           datetime.strptime("03/04/2021 02:45:00 PM", breakformat))
         self.breaks.append(break1)
         self.breaks.append(break2)
         self.breaks.append(break3)
 
+
+    def loadStartEndBreakDict(self, sebDict):
+        for key in sebDict:
+            # convert the values in the sebDict to datetime objects based on the date of the log
+            sebDict[key] = datetime.combine(self.logDate, time.fromisoformat(sebDict[key]))
+        self.startTime = sebDict['callStart']
+        self.endTime = sebDict['callEnd']
+        break1 = Timeframe(sebDict["b1start"], sebDict["b1end"])
+        break2 = Timeframe(sebDict["b2start"], sebDict["b2end"])
+        break3 = Timeframe(sebDict["b3start"], sebDict["b3end"])
+        self.breaks.append(break1)
+        self.breaks.append(break2)
+        self.breaks.append(break3)
 
     def loadAliasData(self, data: [str]):
         for aliasList in data:
