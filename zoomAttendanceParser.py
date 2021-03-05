@@ -2,11 +2,12 @@ import sys
 import json
 import copy
 import datetime
+import numpy
 from datetime import datetime
 from datetime import timedelta
 from datetime import date
 from datetime import time
-from datetime import timezone
+
 
 
 # end-goal - have Zoom API export meeting reports to S3 bucket
@@ -45,6 +46,9 @@ class Timeframe:
         # used for sorting the timeframes
         return self.start < other.start
 
+    def toString(self):
+        return f"{self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+
 
 class Attendee:
     def __init__(self, timeFormat: str, parser):
@@ -53,14 +57,27 @@ class Attendee:
         self.aliases = []
         self.lines = []
         self.timeframes = []
-        self.hrtimeframes = []  # debug
-        self.timeframescopy = []  # debug
-        self.hrtimeframescopy = []  # debug
+        # self.hrtimeframes = []  # debug
+        # self.timeframescopy = []  # debug
+        # self.hrtimeframescopy = []  # debug
         self.timeFormat = timeFormat
         self.firstLogin = "HH:MM:SSAM/PM"
         self.lastLogoff = "HH:MM:SSAM/PM"
         self.timeInCall = timedelta()
         self.status = ''  # present, tardy, or absent - should tardy be split between late join and missing > threshold?
+
+
+    def timeInCallToHours(self):
+        seconds = self.timeInCall.total_seconds()
+        minutes = int(seconds/60)
+        hours = int(minutes/60)
+        minutes = minutes % 60
+        timeString = f"{hours}:"
+        if minutes < 10:
+            minutes = "0" + str(minutes)
+        timeString = timeString + f"{minutes}"
+        return timeString
+
 
     def removeBreakOverlaps(self, breaks):
         # calling timeframes sessions here
@@ -170,12 +187,12 @@ class Attendee:
             else:
                 i += 1
 
-    def createHumanReadableTFs(self):
-        # for debug purposes, perhaps for use in the google sheet
-        for tf in self.timeframes:
-            self.hrtimeframes.append([tf.start.strftime('%H:%M:%S'), tf.end.strftime('%H:%M:%S')])
-        for tf in self.timeframescopy:
-            self.hrtimeframescopy.append([tf.start.strftime('%H:%M:%S'), tf.end.strftime('%H:%M:%S')])
+    # def createHumanReadableTFs(self):
+    #     # for debug purposes, perhaps for use in the google sheet
+    #     for tf in self.timeframes:
+    #         self.hrtimeframes.append([tf.start.strftime('%H:%M:%S'), tf.end.strftime('%H:%M:%S')])
+    #     for tf in self.timeframescopy:
+    #         self.hrtimeframescopy.append([tf.start.strftime('%H:%M:%S'), tf.end.strftime('%H:%M:%S')])
 
 
     def trimTFsToStartAndEnd(self, start, end):
@@ -187,7 +204,7 @@ class Attendee:
     def calculateTimeInCall(self):
         if len(self.timeframes) > 0:
             self.sortTimeFrames()
-            self.timeframescopy = copy.deepcopy(self.timeframes)  # debug
+            # self.timeframescopy = copy.deepcopy(self.timeframes)  # debug
             self.mergeOverlappingTimeframes()
             self.removeBreakOverlaps(self.parser.breaks)
             self.trimTFsToStartAndEnd(self.parser.startTime, self.parser.endTime)
@@ -198,7 +215,7 @@ class Attendee:
                 if timeframe.tracked == True:
                     timeframe.recalcDuration()
                     self.timeInCall += timeframe.duration
-            self.createHumanReadableTFs()
+            # self.createHumanReadableTFs()
 
     # unused?
     def setLines(self, lines: [str]):
@@ -301,51 +318,17 @@ class Parser:
             for alias in a.aliases:
                 self.aliasDictionary[alias] = a
 
-        # for line in data:
-        #     a = Attendee(self.timeFormat, self)
-        #     a.loadFromLine(line)
-        #     self.attendees.append(a)
-        #     for alias in a.aliases:
-        #         self.aliasDictionary[alias] = a
 
-    def loadMeetingData(self, data: [str]):  # load lines and remove the first line which doesn't contain useful data
-        if "Meeting ID" in data[0]:
-            self.logDate = datetime.strptime(data[1].split(",")[2], self.timeFormat)
-        userDataStart = 0
-        for line in data:
-            if "Name (Original Name)" in line:
-                break
-            userDataStart += 1
-        if self.logDate == '':
-            self.logDate = datetime.strptime(data[userDataStart + 1].split(",")[2], self.timeFormat)
-        sessions = data[userDataStart:]
-        for line in sessions:
-            # in the meeting file:
-            # [0] = Attendee alias
-            # [1] = email, if applicable
-            # [2] = login time
-            # [3] = logout time
-            # [4] = time in minutes
-            # [5] = Host or not, no = host/co-host, yes = attendee
-            splitline = line.split(",")
-            if splitline[5] == "Yes\n" or splitline[5] == "Yes":  # only track attendance for guests, not hosts
-                alias = splitline[0].lower()
-                # grab only the "HH:MM:SS AM/PM"
-                loginTime = datetime.strptime(splitline[2], self.timeFormat)
-                logoutTime = datetime.strptime(splitline[3], self.timeFormat)
-                recognizedPair = self.recognizedAlias(alias)  # grabs if the alias is recognized or not and what the a
-                if recognizedPair[0]:
-                    self.aliasDictionary[recognizedPair[1]].addTimeFrame(loginTime, logoutTime)
-                else:
-                    # track unrecognized alias and its timeframe
-                    uAttendee = Attendee(self.timeFormat, self)
-                    uAttendee.name = alias
-                    if alias not in uAttendee.aliases:
-                        uAttendee.aliases.append(alias)
-                    uAttendee.addTimeFrame(loginTime, logoutTime)
-                    self.aliasDictionary[alias] = uAttendee
-                    self.unrecognizedAttendees.append(uAttendee)
-
+    def attendeesDataToMatrix(self):
+        matrix = [["Name", "Time in call", "Timeframes in call"]]
+        for a in self.attendees:
+            rowData = []
+            rowData.append(a.name)
+            rowData.append(a.timeInCallToHours())
+            for tf in a.timeframes:
+                rowData.append(tf.toString())
+            matrix.append(rowData)
+        return matrix
 
     def recognizedAlias(self, alias):
         # returns if a partial alias is on the list of attendees and the corresponding full alias

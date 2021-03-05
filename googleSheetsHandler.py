@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os.path
 import gspread
+import numpy as np
 from datetime import date
 # from googleapiclient import discovery
 # from google.oauth2 import service_account
@@ -10,7 +11,6 @@ class GoogleSheetsHandler:
 
     def __init__(self):
         start = timer()
-        self.alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         self.token = None
         # self.SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
         # self.spreadSheetID = spreadsheetID
@@ -32,20 +32,17 @@ class GoogleSheetsHandler:
     def getAttendeesAndAliasData(self, spreadsheetID):
         worksheetTitle = "Attendees"
         start = timer()
-        # used for defining ranges. Not meant to exceed past column Z
-        if self.spreadsheet is None or self.spreadsheet.id != spreadsheetID:
-            self.spreadsheet = self.gc.open_by_key(spreadsheetID)
-        if self.worksheet is None or self.worksheet.title != worksheetTitle:
-            self.worksheet = self.spreadsheet.worksheet(worksheetTitle)
+        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        # read formula values from spreadsheet to intelligently know which cells to read from
+        # may not be necessary if the whole worksheet is read and parsed but this seems fine
+        # does result in 2 extra API calls though
         numAttendeesRange = "A2"
-        #numAttendeesRange = "Attendees!"
         maxAliasesRange = "B2"
         numAttendees = int(self.worksheet.get(numAttendeesRange)[0][0])
         maxAliases = int(self.worksheet.get(maxAliasesRange)[0][0])
         nameAliasMin = gspread.utils.rowcol_to_a1(3, 1)
         nameAliasMax = gspread.utils.rowcol_to_a1(numAttendees + 2, maxAliases + 2)
-        nameAndAliasRange = f"{gspread.utils.rowcol_to_a1(3, 1)}:{gspread.utils.rowcol_to_a1(numAttendees + 2, maxAliases + 2)}"
-        # f"A3:{self.alphabet[2 + maxAliases - 1]}{numAttendees + 2}"
+        nameAndAliasRange = f"{nameAliasMin}:{nameAliasMax}"
         nameAndAliasData = self.worksheet.get(nameAndAliasRange)
         for entry in nameAndAliasData:
             entry.pop(1)  # remove the number of aliases
@@ -118,3 +115,8 @@ class GoogleSheetsHandler:
         self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
         cellData = self.worksheet.get(cell)[0][0]
         return cellData
+
+
+    def writeMatrixToCells(self, spreadsheetID, worksheetTitle, startCell, matrix):
+        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        self.worksheet.update(startCell, matrix)

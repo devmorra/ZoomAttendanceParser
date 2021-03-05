@@ -53,6 +53,9 @@ parser.loadStartEndBreakDict(sebDict)
 for attendee in parser.attendees:
     attendee.calculateTimeInCall()
     print(f"{attendee.name} in call for {attendee.timeInCall}, entered at {attendee.firstLogin}, left at {attendee.lastLogoff}")
+outputID = '1vHl2oiG5izPAVAowjyqzUAMhHfvXeMBBdaGZF16RYBQ'
+gsh.writeMatrixToCells(outputID, "Sheet1", "A1", parser.attendeesDataToMatrix())
+
 # parser.formatDataForCells
 # spreadsheet based on week
 # if the spreadsheet doesn't exist, make it
