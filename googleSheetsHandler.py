@@ -28,6 +28,21 @@ class GoogleSheetsHandler:
     def openSheet(self, spreadsheetID):
         self.spreadsheet = self.gc.open_by_key(spreadsheetID)
 
+    def createAndSetSpreadsheet(self, folderID, spreadsheetTitle):
+        try:
+            self.spreadsheet = self.gc.open(spreadsheetTitle)
+        except:
+            self.gc.create(spreadsheetTitle, folderID)
+            # self.setSpreadsheet()
+
+
+    def createAndSetWorksheet(self, spreadsheetID, worksheetTitle, index):
+        try:
+            self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        except:
+            self.spreadsheet.add_worksheet(worksheetTitle, 100, 100, index)
+            self.setWorksheet(worksheetTitle)
+
 
     def getAttendeesAndAliasData(self, spreadsheetID):
         worksheetTitle = "Attendees"
@@ -49,6 +64,13 @@ class GoogleSheetsHandler:
         end = timer()
         print(end - start)
         return nameAndAliasData
+
+
+    def getMeetingsFromCentralSheet(self, centralSheetID):
+        self.setSpreadsheetAndWorksheet(centralSheetID, "Form Responses 1")
+        masterData = self.worksheet.get_all_values()[1:]
+        return masterData
+
 
     def getStartEndBreakDict(self, spreadsheetID, logDate):
         dayOfWeek = logDate.weekday()
@@ -86,6 +108,27 @@ class GoogleSheetsHandler:
         #return service_account.Credentials.from_service_account_file(pathToServiceAccountFile, scopes=self.SCOPES)
 
 
+    def getRangeData(self, spreadsheetID, worksheetTitle, range):
+
+        # Call the Sheets API
+        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        rangeData = self.worksheet.get(range)
+        return rangeData
+
+
+    def getAllFromSheet(self, spreadsheetID, worksheetTitle):
+        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        return self.worksheet.get_all_values()
+
+
+    def getCellData(self, spreadsheetID, worksheetTitle, cell):
+
+        # Call the Sheets API
+        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        cellData = self.worksheet.get(cell)[0][0]
+        return cellData
+
+
     def setSpreadsheet(self, spreadsheetID):
         if self.spreadsheet is None or self.spreadsheet.id != spreadsheetID:
             self.spreadsheet = self.gc.open_by_key(spreadsheetID)
@@ -100,21 +143,6 @@ class GoogleSheetsHandler:
         self.setSpreadsheet(spreadsheetID)
         self.setWorksheet(worksheetTitle)
 
-
-    def getRangeData(self, spreadsheetID, worksheetTitle, range):
-
-        # Call the Sheets API
-        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
-        rangeData = self.worksheet.get(range)
-        return rangeData
-
-
-    def getCellData(self, spreadsheetID, worksheetTitle, cell):
-
-        # Call the Sheets API
-        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
-        cellData = self.worksheet.get(cell)[0][0]
-        return cellData
 
 
     def writeMatrixToCells(self, spreadsheetID, worksheetTitle, startCell, matrix):

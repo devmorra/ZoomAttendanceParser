@@ -319,15 +319,28 @@ class Parser:
                 self.aliasDictionary[alias] = a
 
 
+    def calculateAttendeesTimeInCall(self):
+        for attendee in self.attendees:
+            attendee.calculateTimeInCall()
+        for attendee in self.unrecognizedAttendees:
+            attendee.calculateTimeInCall()
+
+
     def attendeesDataToMatrix(self):
         matrix = [["Name", "Time in call", "Timeframes in call"]]
         for a in self.attendees:
-            rowData = []
-            rowData.append(a.name)
-            rowData.append(a.timeInCallToHours())
+            rowData = [a.name, a.timeInCallToHours()]
             for tf in a.timeframes:
                 rowData.append(tf.toString())
             matrix.append(rowData)
+        if len(self.unrecognizedAttendees) > 0:
+            matrix.append([""])
+            matrix.append(["Unrecognized/untracked Aliases in Call", "Time in call", "Timeframes in call"])
+            for ua in self.unrecognizedAttendees:
+                rowData = [ua.name, ua.timeInCallToHours()]
+                for tf in ua.timeframes:
+                    rowData.append(tf.toString())
+                matrix.append(rowData)
         return matrix
 
     def recognizedAlias(self, alias):
