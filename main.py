@@ -57,7 +57,9 @@ centralData = gsh.getMeetingsFromCentralSheet("1w_hveJ7vAscC6IV4-P0-ZjovewLCI-lE
 for line in centralData:
     # data from sheet for this particular cycle
     cycleName = line[1]
-    email = line[2]
+    emails = line[2].split(",")
+    for email in emails:
+        email.replace(" ", "")
     folderID = line[3]
     spreadsheetID = line[4]
     endDate = line[5]
@@ -97,6 +99,8 @@ for line in centralData:
         # worksheet based on data
         # if the worksheet doesn't exist (it probably doesn't), add it
         gsh.writeMatrixToCells(outputID, worksheetTitle, "A1", parser.attendeesDataToMatrix())
+        gsh.shareSheetToEmails(outputID, emails)
+
 
 # parser.formatDataForCells
 

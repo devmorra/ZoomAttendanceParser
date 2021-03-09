@@ -33,6 +33,7 @@ class GoogleSheetsHandler:
             self.spreadsheet = self.gc.open(spreadsheetTitle)
         except:
             self.gc.create(spreadsheetTitle, folderID)
+            print(f"Creating {spreadsheetTitle} in {folderID}")
             # self.setSpreadsheet()
 
 
@@ -41,6 +42,7 @@ class GoogleSheetsHandler:
             self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
         except:
             self.spreadsheet.add_worksheet(worksheetTitle, 100, 100, index)
+            print(f"Adding {worksheetTitle} to {self.spreadsheet.id}")
             self.setWorksheet(worksheetTitle)
 
 
@@ -132,11 +134,13 @@ class GoogleSheetsHandler:
     def setSpreadsheet(self, spreadsheetID):
         if self.spreadsheet is None or self.spreadsheet.id != spreadsheetID:
             self.spreadsheet = self.gc.open_by_key(spreadsheetID)
+        print(f"Spreadsheet set to {self.spreadsheet.id}")
 
 
     def setWorksheet(self, worksheetTitle):
         if self.worksheet is None or self.worksheet.title != worksheetTitle:
             self.worksheet = self.spreadsheet.worksheet(worksheetTitle)
+        print(f"Worksheet set to {self.worksheet.title}")
 
 
     def setSpreadsheetAndWorksheet(self, spreadsheetID, worksheetTitle):
@@ -144,7 +148,14 @@ class GoogleSheetsHandler:
         self.setWorksheet(worksheetTitle)
 
 
+    def shareSheetToEmails(self, spreadsheetID, emails):
+        self.setSpreadsheet(spreadsheetID)
+        for email in emails:
+            self.spreadsheet.share(email, "user", "writer", "True")
+            print(f"{spreadsheetID} shared with {email}")
+
 
     def writeMatrixToCells(self, spreadsheetID, worksheetTitle, startCell, matrix):
         self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
         self.worksheet.update(startCell, matrix)
+        print(f"Data written to spreadsheet:{spreadsheetID}\nworksheet:{worksheetTitle}\nrange:{range}")

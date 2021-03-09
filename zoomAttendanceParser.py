@@ -38,6 +38,7 @@ class Timeframe:
         self.end = end
         self.duration = end - start
         self.tracked = True
+        self.case = 0
 
     def recalcDuration(self):
         self.duration = self.end - self.start
@@ -47,7 +48,10 @@ class Timeframe:
         return self.start < other.start
 
     def toString(self):
-        return f"{self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+        if self.tracked:
+            return f"case {self.case} {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+        else:
+            return f"Break case {self.case} {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
 
 
 class Attendee:
@@ -104,15 +108,18 @@ class Attendee:
                             self.timeframes[i] = preBreakTf
                             self.timeframes.insert(i + 1, br)
                             self.timeframes.insert(i + 2, postBreakTf)
+                            preBreakTf.case = 2
+                            postBreakTf.case = 2
                         # case 3: session tail end overlaps with break
                         # session start untouched, session end = break start
                         else:  # elif br.end > tf.end:  # if the break ends after their session
                             preBreakTf = Timeframe(tf.start, br.start)  # this is done in both cases
                             breakTf = Timeframe(br.start, tf.end)
+                            preBreakTf.case = 3
+                            breakTf.case = 3
                             self.timeframes[i] = preBreakTf
                             self.timeframes.insert(i + 1, breakTf)
                             # since the pre-break session got shortened already, it should be all good
-                            pass
                     # case 4: session head overlaps with break
                     elif br.start < tf.start and br.end > tf.start:
                         # session becomes end of break to previous end of session
@@ -121,14 +128,18 @@ class Attendee:
                         self.timeframes[i] = overlappingTf
                         postBreakTf = Timeframe(br.end, tf.end)
                         self.timeframes.insert(i + 1, postBreakTf)
+                        overlappingTf.case = 4
+                        postBreakTf.case = 4
+                        # case 1: session entirely within a break
                     elif br.start < tf.start and br.end > tf.end:
+                        self.timeframes[i].case = 1
                         self.timeframes[i].tracked = False
 
                         # session start untouched, session end = break start
 
-                # case : session entirely within a break
-                if br.start < tf.start and br.end > tf.end:
-                    tf.tracked = False
+
+                # if br.start < tf.start and br.end > tf.end:
+                #     tf.tracked = False
                 # set to invalid
                 # if breakStart > tfStart and
                 i += 1
