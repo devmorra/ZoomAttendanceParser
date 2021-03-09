@@ -49,9 +49,11 @@ class Timeframe:
 
     def toString(self):
         if self.tracked:
-            return f"case {self.case} {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+            return f"{self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+            # return f"case {self.case} {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
         else:
-            return f"Break case {self.case} {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+            return f"Break from {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
+            # return f"Break case {self.case} {self.start.strftime('%H:%M')}-{self.end.strftime('%H:%M')}"
 
 
 class Attendee:
@@ -92,36 +94,35 @@ class Attendee:
         for br in breaks:
             br.tracked = False  # this should be redundant but breaks aren't really imported properly yet
             i = 0
+
             while i < len(self.timeframes):
                 tf = self.timeframes[i]
-                if tf.tracked:
-                    if br.start > tf.start and br.start < tf.end:  # if the break starts during the session
-                        # case 2: break contained entirely within session, split session into 3 sessions
-
-                        if br.end < tf.end:  # if the break ends before the session does ex. they stay logged in during break
-                            # session 1: original start - break start: valid
-                            # session 2: break start - break end: invalid
-                            # session 3: break end - original end: valid
-                            # breakTf = br
-                            preBreakTf = Timeframe(tf.start, br.start)  # this is done in both cases
-                            postBreakTf = Timeframe(br.end, tf.end)
-                            self.timeframes[i] = preBreakTf
-                            self.timeframes.insert(i + 1, br)
-                            self.timeframes.insert(i + 2, postBreakTf)
-                            preBreakTf.case = 2
-                            postBreakTf.case = 2
-                        # case 3: session tail end overlaps with break
-                        # session start untouched, session end = break start
-                        else:  # elif br.end > tf.end:  # if the break ends after their session
-                            preBreakTf = Timeframe(tf.start, br.start)  # this is done in both cases
-                            breakTf = Timeframe(br.start, tf.end)
-                            preBreakTf.case = 3
-                            breakTf.case = 3
-                            self.timeframes[i] = preBreakTf
-                            self.timeframes.insert(i + 1, breakTf)
-                            # since the pre-break session got shortened already, it should be all good
-                    # case 4: session head overlaps with break
-                    elif br.start < tf.start and br.end > tf.start:
+                if tf.tracked is True:
+                    # case 1, tf entirely within break
+                    if br.start <= tf.start and br.end >= tf.end:
+                        self.timeframes[i].case = 1
+                        self.timeframes[i].tracked = False
+                    # case 2, break entirely within tf
+                    elif tf.start <= br.start and tf.end >= br.end:
+                        preBreakTf = Timeframe(tf.start, br.start)
+                        breakTF = Timeframe(br.start, br.end)
+                        postBreakTf = Timeframe(br.end, tf.end)
+                        self.timeframes[i] = preBreakTf
+                        self.timeframes.insert(i + 1, breakTF)
+                        self.timeframes.insert(i + 2, postBreakTf)
+                        preBreakTf.case = 2
+                        breakTF.case = 2
+                        postBreakTf.case = 2
+                    # case 3, tail end of timeframe overlaps with break
+                    elif tf.start < br.start < tf.end < br.end:
+                        preBreakTf = Timeframe(tf.start, br.start)  # this is done in both cases
+                        breakTf = Timeframe(br.start, tf.end)
+                        preBreakTf.case = 3
+                        breakTf.case = 3
+                        self.timeframes[i] = preBreakTf
+                        self.timeframes.insert(i + 1, breakTf)
+                    # case 4, head end of timeframe overlaps with break
+                    elif br.start < tf.start < br.end < tf.end:
                         # session becomes end of break to previous end of session
                         overlappingTf = Timeframe(tf.start, br.end)
                         overlappingTf.tracked = False
@@ -130,20 +131,21 @@ class Attendee:
                         self.timeframes.insert(i + 1, postBreakTf)
                         overlappingTf.case = 4
                         postBreakTf.case = 4
-                        # case 1: session entirely within a break
-                    elif br.start < tf.start and br.end > tf.end:
-                        self.timeframes[i].case = 1
-                        self.timeframes[i].tracked = False
-
-                        # session start untouched, session end = break start
-
-
-                # if br.start < tf.start and br.end > tf.end:
-                #     tf.tracked = False
-                # set to invalid
-                # if breakStart > tfStart and
+                    # case 5, the tf totally precedes the break
+                    elif tf.start < tf.end <= br.start:
+                        # print(f"Case 5 {tf.start}, {tf.end}, {br.start}, {br.end}")
+                        tf.case = 5
+                        tf.tracked = True
+                    # case 6, the tf is completely past the break
+                    elif tf.end > tf.start >= br.end:
+                        tf.case = 6
+                        tf.tracked = True
+                    # unknown case
+                    else:
+                        tf.case = 7
+                        print(f"{tf.start}, {tf.end}, {br.start}, {br.end}")
+                        print("Uh oh the break splitting logic is broken")
                 i += 1
-        pass
 
 
     def loadFromList(self, glist):
