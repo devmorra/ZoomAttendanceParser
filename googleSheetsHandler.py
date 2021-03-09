@@ -5,6 +5,7 @@ import numpy as np
 from datetime import date
 # from googleapiclient import discovery
 # from google.oauth2 import service_account
+import time
 from timeit import default_timer as timer
 
 class GoogleSheetsHandler:
@@ -32,8 +33,11 @@ class GoogleSheetsHandler:
         try:
             self.spreadsheet = self.gc.open(spreadsheetTitle)
         except:
-            self.gc.create(spreadsheetTitle, folderID)
+            self.spreadsheet = self.gc.create(spreadsheetTitle, folderID)
             print(f"Creating {spreadsheetTitle} in {folderID}")
+            print(f"{self.spreadsheet.id} created")
+            # print("Waiting 10s for spreadsheet to become active...")
+            # time.sleep(10)
             # self.setSpreadsheet()
 
 
@@ -44,6 +48,10 @@ class GoogleSheetsHandler:
             self.spreadsheet.add_worksheet(worksheetTitle, 100, 100, index)
             print(f"Adding {worksheetTitle} to {self.spreadsheet.id}")
             self.setWorksheet(worksheetTitle)
+
+
+    def deleteSpreadSheet(self, spreadsheetID):
+        self.gc.del_spreadsheet(spreadsheetID)
 
 
     def getAttendeesAndAliasData(self, spreadsheetID):
@@ -115,6 +123,7 @@ class GoogleSheetsHandler:
         # Call the Sheets API
         self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
         rangeData = self.worksheet.get(range)
+        print(f"Grabbing data from {spreadsheetID}, {worksheetTitle}, {range}")
         return rangeData
 
 
@@ -134,13 +143,15 @@ class GoogleSheetsHandler:
     def setSpreadsheet(self, spreadsheetID):
         if self.spreadsheet is None or self.spreadsheet.id != spreadsheetID:
             self.spreadsheet = self.gc.open_by_key(spreadsheetID)
-        print(f"Spreadsheet set to {self.spreadsheet.id}")
+            return self.spreadsheet
+        # print(f"Spreadsheet set to {self.spreadsheet.id}")
 
 
     def setWorksheet(self, worksheetTitle):
         if self.worksheet is None or self.worksheet.title != worksheetTitle:
             self.worksheet = self.spreadsheet.worksheet(worksheetTitle)
-        print(f"Worksheet set to {self.worksheet.title}")
+            return self.worksheet
+        # print(f"Worksheet set to {self.worksheet.title}")
 
 
     def setSpreadsheetAndWorksheet(self, spreadsheetID, worksheetTitle):
@@ -158,4 +169,4 @@ class GoogleSheetsHandler:
     def writeMatrixToCells(self, spreadsheetID, worksheetTitle, startCell, matrix):
         self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
         self.worksheet.update(startCell, matrix)
-        print(f"Data written to spreadsheet:{spreadsheetID}\nworksheet:{worksheetTitle}\nrange:{range}")
+        print(f"Data written to spreadsheet: {spreadsheetID}\nworksheet: {worksheetTitle}")

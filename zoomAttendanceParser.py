@@ -140,7 +140,7 @@ class Attendee:
                     elif tf.end > tf.start >= br.end:
                         tf.case = 6
                         tf.tracked = True
-                    # unknown case
+                    # unknown case, danger zone
                     else:
                         tf.case = 7
                         print(f"{tf.start}, {tf.end}, {br.start}, {br.end}")
@@ -266,7 +266,6 @@ class Parser:
         self.loadAliasData(aliasdata)
         # self.parseMeetingResponse(meetingResponse)
         # self.loadMeetingData(meetingdata)
-        # self.loadBreaks()
 
 
     def parseMeetingResponse(self, meetingResponse):
@@ -294,34 +293,26 @@ class Parser:
         self.logDate = date.fromisoformat(arbitraryLogin.split("T")[0])  # use date to combine with break time objects
         # self.logDoW = self.logDate.weekday()
 
-    def loadBreaks(self):
-        # hard coded for now
-        # in the future it should be pulled from google sheets cells
-        breakformat = "%m/%d/%Y %I:%M:%S %p"
-        # manual data for now
-        break1 = Timeframe(datetime.strptime("03/04/2021 10:30:00 AM", breakformat),
-                           datetime.strptime("03/04/2021 10:45:00 AM", breakformat))
-        break2 = Timeframe(datetime.strptime("03/04/2021 12:30:00 PM", breakformat),
-                           datetime.strptime("03/04/2021 01:35:00 PM", breakformat))
-        break3 = Timeframe(datetime.strptime("03/04/2021 02:30:00 PM", breakformat),
-                           datetime.strptime("03/04/2021 02:45:00 PM", breakformat))
-        self.breaks.append(break1)
-        self.breaks.append(break2)
-        self.breaks.append(break3)
-
 
     def loadStartEndBreakDict(self, sebDict):
         for key in sebDict:
             # convert the values in the sebDict to datetime objects based on the date of the log
-            sebDict[key] = datetime.combine(self.logDate, time.fromisoformat(sebDict[key]))
+            try:
+                sebDict[key] = datetime.combine(self.logDate, time.fromisoformat(sebDict[key]))
+            except:
+                print("Break not properly formatted")
         self.startTime = sebDict['callStart']
         self.endTime = sebDict['callEnd']
         break1 = Timeframe(sebDict["b1start"], sebDict["b1end"])
+        if break1.duration.total_seconds() > 0:
+            self.breaks.append(break1)
         break2 = Timeframe(sebDict["b2start"], sebDict["b2end"])
+        if break1.duration.total_seconds() > 0:
+            self.breaks.append(break2)
         break3 = Timeframe(sebDict["b3start"], sebDict["b3end"])
-        self.breaks.append(break1)
-        self.breaks.append(break2)
-        self.breaks.append(break3)
+        if break1.duration.total_seconds() > 0:
+            self.breaks.append(break3)
+
 
     def loadAliasData(self, data: [str]):
         for aliasList in data:
@@ -340,7 +331,7 @@ class Parser:
 
 
     def attendeesDataToMatrix(self):
-        matrix = [["Name", "Time in call", "Timeframes in call"]]
+        matrix = [["Please email any issues to cmorra@perscholas.org"],["Log Date", self.logDate.strftime("%m/%d/%y")],["Name", "Time in call", "Timeframes in call"]]
         for a in self.attendees:
             rowData = [a.name, a.timeInCallToHours()]
             for tf in a.timeframes:
