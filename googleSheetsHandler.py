@@ -1,6 +1,8 @@
 from __future__ import print_function
 import os.path
 import gspread
+import gspread_formatting as gsf
+from gspread_formatting import *
 import numpy as np
 from datetime import date
 # from googleapiclient import discovery
@@ -22,12 +24,86 @@ class GoogleSheetsHandler:
         # self.getAttendeesAndAliasData(self.spreadSheetID)
         self.spreadsheet = None
         self.worksheet = None
+
         # end = timer()
         # totaltime = end - start
         # print(totaltime)
 
     def openSheet(self, spreadsheetID):
         self.spreadsheet = self.gc.open_by_key(spreadsheetID)
+
+
+    def applyStandardFormatting(self, spreadsheetID, worksheetTitle, startTimeString):
+        self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        breakConditionRule = ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range('C:Z', self.worksheet)],
+            booleanRule=BooleanRule(
+                condition=BooleanCondition("TEXT_STARTS_WITH", ["Break"]),
+                format=gsf.cellFormat(backgroundColor=gsf.color(0.70, 0.70, 0.70))  # should color break cells grey
+            )
+        )
+        absentConditionRule = ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range('B5:B', self.worksheet)],
+            booleanRule=BooleanRule(
+                condition=BooleanCondition("TEXT_EQ", ["0:00"]),  # "0:00" cells are absent
+                format=gsf.cellFormat(backgroundColor=gsf.color(1, 0, 0))  # make them an angry red
+            )
+        )
+        emptyFirstTimeframeRule = ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range('C5:C', self.worksheet)],
+            booleanRule=BooleanRule(
+                # if there's no timeframe for the first one then keep it white instead of yellow
+                condition=BooleanCondition("BLANK"),
+                format=gsf.cellFormat(backgroundColor=gsf.color(1, 1, 1))  # white
+            )
+        )
+        lateConditionRule = ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range('C5:C', self.worksheet)],
+            booleanRule=BooleanRule(
+                # If the first timeframe doesn't have the start time in it, mark it yellow
+                condition=BooleanCondition("TEXT_NOT_CONTAINS", [startTimeString]),
+                format=gsf.cellFormat(backgroundColor=gsf.color(1, 1, 0))  # yellow
+            )
+        )
+        onTimeConditionRule = ConditionalFormatRule(
+            ranges=[GridRange.from_a1_range('C5:C', self.worksheet)],
+            booleanRule=BooleanRule(
+                # if it does have the start time, mark it green
+                condition=BooleanCondition("TEXT_STARTS_WITH", [startTimeString]),
+                format=gsf.cellFormat(backgroundColor=gsf.color(0, 1, 0))  # green
+            )
+        )
+
+        rules = get_conditional_format_rules(self.worksheet)
+        rules.clear()
+        # order is important, rule that is appended first takes priority
+        rules.append(breakConditionRule)
+        rules.append(absentConditionRule)
+        rules.append(emptyFirstTimeframeRule)
+        rules.append(lateConditionRule)
+        rules.append(onTimeConditionRule)
+        rules.save()
+        self.autoResizeCells(self.spreadsheet.id, self.worksheet.id)
+
+
+    def autoResizeCells(self, spreadsheetID, worksheetID):
+        payload = {
+            "requests": [
+                {
+                    "autoResizeDimensions": {
+                        "dimensions": {
+                            "sheetId": worksheetID,
+                            "dimension": "COLUMNS",
+                            "startIndex": 0,
+                            "endIndex": 30
+                        }
+                    }
+                }
+            ]
+        }
+        url = f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetID}:batchUpdate"
+        self.gc.request("post", url, json=payload)
+
 
     def createAndSetSpreadsheet(self, folderID, spreadsheetTitle):
         try:

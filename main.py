@@ -100,6 +100,8 @@ for line in centralData:
         gsh.worksheet.clear()
         #if parser.logDate == today.date():
         gsh.writeMatrixToCells(outputID, worksheetTitle, "A1", parser.attendeesDataToMatrix())
+        startTimeString = parser.startTime.strftime("%H:%M")
+        gsh.applyStandardFormatting(outputID, worksheetTitle, startTimeString)
         #else:
             #gsh.writeMatrixToCells(outputID, worksheetTitle, "A1", [["No meeting found on this date."]])
         # gsh.shareSheetToEmails(outputID, emails)

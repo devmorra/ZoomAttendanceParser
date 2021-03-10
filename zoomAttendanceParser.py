@@ -297,6 +297,9 @@ class Parser:
     def loadStartEndBreakDict(self, sebDict):
         for key in sebDict:
             # convert the values in the sebDict to datetime objects based on the date of the log
+            #if sebDict[key] == '':
+                # catch empty breaks
+
             try:
                 sebDict[key] = datetime.combine(self.logDate, time.fromisoformat(sebDict[key]))
             except:
@@ -331,7 +334,10 @@ class Parser:
 
 
     def attendeesDataToMatrix(self):
-        matrix = [["Please email any issues to cmorra@perscholas.org"],["Log Date", self.logDate.strftime("%m/%d/%y")],["Name", "Time in call", "Timeframes in call"]]
+        matrix = [["Please email any issues to cmorra@perscholas.org"],
+                  ["Log Date", self.logDate.strftime("%m/%d/%y")],
+                  ["Start time", self.startTime.strftime("%H:%M")],
+                  ["Name", "Time in call", "Timeframes in call"]]
         for a in self.attendees:
             rowData = [a.name, a.timeInCallToHours()]
             for tf in a.timeframes:
