@@ -334,8 +334,8 @@ class Parser:
         returnMatrix = [["Name", "Join time", "Leave time"]]
         for p in participantDictionaries:
             name = p['name']
-            joinTime = datetime.strftime(datetime.strptime(p['join_time'], self.timeFormat), "%H:%M")
-            leaveTime = datetime.strftime(datetime.strptime(p['leave_time'], self.timeFormat), "%H:%M")
+            joinTime = datetime.strftime(datetime.strptime(p['join_time'], self.timeFormat) + self.timezoneOffset, "%H:%M")
+            leaveTime = datetime.strftime(datetime.strptime(p['leave_time'], self.timeFormat)+ self.timezoneOffset, "%H:%M")
             a = [name, joinTime, leaveTime]
             returnMatrix.append(a)
         return returnMatrix

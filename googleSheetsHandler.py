@@ -132,7 +132,6 @@ class GoogleSheetsHandler:
 
     def getAttendeesAndAliasData(self, spreadsheetID):
         worksheetTitle = "Attendees"
-        start = timer()
         self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
         # read formula values from spreadsheet to intelligently know which cells to read from
         # may not be necessary if the whole worksheet is read and parsed but this seems fine
@@ -147,8 +146,6 @@ class GoogleSheetsHandler:
         nameAndAliasData = self.worksheet.get(nameAndAliasRange)
         for entry in nameAndAliasData:
             entry.pop(1)  # remove the number of aliases
-        end = timer()
-        print(end - start)
         return nameAndAliasData
 
 

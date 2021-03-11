@@ -6,6 +6,7 @@ import os
 import datetime
 import sys
 import time
+import logging
 import json
 
 from timeit import default_timer as timer
@@ -39,14 +40,8 @@ def endOfWeekString(date):
     return endString
 
 
-# ZOOM_API_KEY = # os.environ.get("ZOOM_API_KEY")
-# ZOOM_API_SECRET = # os.environ.get("ZOOM_API_SECRET")
-# ZOOM_MEETING_ID = # os.environ.get("ZOOM_MEETING_ID")
-
-# SERVICE_ACCOUNT_FILE = f".secrets/{os.listdir('.secrets')[0]}"
-# SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.file"]
 start = timer()
-
+logger = logging.getLogger("Main logger")
 timeFormat = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -64,81 +59,118 @@ centralData = gsh.getMeetingsFromCentralSheet(centralSheetID)
 try:
     print(sys.argv[1], sys.argv[2])
 except:
-    print("Please provide the date and either 'central' or the number of the row that should be parsed from the central sheet")
+    print("Please provide the date or 'today' and either 'central' or the number of the row that should be parsed from the central sheet")
 
-try:
-    targetDate = datetime.datetime.strptime(sys.argv[1], "%m-%d-%y")
-except:
-    print("Invalid date format provided.\n Please use MM-DD-YY with zero-padding")
-    exit()
+if sys.argv[1] == "today":
+    tdate = datetime.datetime.today()
+else:
+    try:
+        tdate = datetime.datetime.strptime(sys.argv[1], "%m-%d-%y")
+    except:
+        print("Invalid date format provided.\n Please use MM-DD-YY with zero-padding")
+        exit()
 
 dateArray = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-for line in centralData:
-    # data from sheet for this particular cycle
-    cycleName = line[1]
-    emails = line[2].split(",")
+
+def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
+    cycleName = rowdata[1]
+    emails = rowdata[2].split(",")
     for email in emails:
         email.replace(" ", "")
-    folderID = line[3]
-    spreadsheetID = line[4]
-    endDate = line[5]
-    daysRunning = line[6]
+    folderID = rowdata[3]
+    spreadsheetID = rowdata[4]
+    endDate = rowdata[5]
+    splitEndDate = endDate.split("/")
+    paddedEndDate = ''
+    for section in splitEndDate:
+        if len(section) == 1:
+            paddedEndDate += "0" + section + "/"
+        else:
+            paddedEndDate += section + "/"
+    paddedEndDate = paddedEndDate[:-1]
+    endDate = datetime.datetime.strptime(paddedEndDate, "%m/%d/%Y")
+    # datetime.datetime.strptime(rowdata[5],)
+    print(targetDate)
+    print(endDate)
+    daysRunning = rowdata[6]
 
-
+    if targetDate < endDate:
     # today = datetime.datetime.today()
     # todayIndex = datetime.datetime.today().weekday()
     # todaysWeekday = today.strftime("%A")  # convert datetime number to string of the weekday
-    targetDateWeekday = targetDate.strftime("%A")
+        targetDateWeekday = targetDate.strftime("%A")
 
-    #if todaysWeekday in daysRunning:  # see if the class is run on that day
-    if targetDateWeekday in daysRunning:
-        # set desired spreadsheet name to the given week + the cycle name + Attendance
-        outputTitle = f"{startOfWeekString(targetDate)} - {endOfWeekString(targetDate)} {cycleName} Attendance"
-        aliasData = gsh.getAttendeesAndAliasData(spreadsheetID)
-        meetingID = gsh.getCellData(spreadsheetID, "Settings", "A2").replace(" ", "")
-        meetResponse = z.get_meeting_participants(meetingID)
-        timeZoneOffset = int(gsh.getCellData(spreadsheetID, "Settings", "C9"))
-        parser = Parser(timeFormat, timeZoneOffset, aliasData, meetResponse)
-        parser.parseMeetingResponse()
+        # if todaysWeekday in daysRunning:  # see if the class is run on that day
+        if targetDateWeekday in daysRunning:
+            # set desired spreadsheet name to the given week + the cycle name + Attendance
+            outputTitle = f"{startOfWeekString(targetDate)} - {endOfWeekString(targetDate)} {cycleName} Attendance"
+            aliasData = sheetHandler.getAttendeesAndAliasData(spreadsheetID)
+            meetingID = sheetHandler.getCellData(spreadsheetID, "Settings", "A2").replace(" ", "")
+            meetResponse = zoomRequester.get_meeting_participants(meetingID)
+            timeZoneOffset = int(sheetHandler.getCellData(spreadsheetID, "Settings", "C9"))
+            parser = Parser(timeFormat, timeZoneOffset, aliasData, meetResponse)
+            parser.parseMeetingResponse()
 
-        sebDict = gsh.getStartEndBreakDict(spreadsheetID, parser.logDate)
-        parser.loadStartEndBreakDict(sebDict)
-        parser.calculateAttendeesTimeInCall()
-        if parser.logDate == targetDate.date():
-            startTimeString = parser.startTime.strftime("%H:%M")
-            gsh.createAndSetSpreadsheet(folderID, outputTitle)
-            outputID = gsh.spreadsheet.id
-            worksheetTitle = f"{targetDateWeekday} {targetDate.strftime('%m/%d/%y')}"
-            logWorksheetTitle = f"{targetDateWeekday} {targetDate.strftime('%m/%d/%y')} log"
-            gsh.createAndSetWorksheet(outputID, worksheetTitle, None)
-            gsh.worksheet.clear()
-            gsh.writeMatrixToCells(outputID, worksheetTitle, "A1", parser.attendeesDataToMatrix())
-            gsh.applyStandardFormatting(outputID, worksheetTitle, startTimeString)
+            sebDict = sheetHandler.getStartEndBreakDict(spreadsheetID, parser.logDate)
+            parser.loadStartEndBreakDict(sebDict)
+            parser.calculateAttendeesTimeInCall()
+            if parser.logDate == targetDate.date():
+                startTimeString = parser.startTime.strftime("%H:%M")
+                sheetHandler.createAndSetSpreadsheet(folderID, outputTitle)
+                outputID = sheetHandler.spreadsheet.id
+                worksheetTitle = f"{targetDateWeekday} {targetDate.strftime('%m/%d/%y')}"
+                logWorksheetTitle = f"{targetDateWeekday} {targetDate.strftime('%m/%d/%y')} log"
+                sheetHandler.createAndSetWorksheet(outputID, worksheetTitle, None)
+                sheetHandler.worksheet.clear()
+                sheetHandler.writeMatrixToCells(outputID, worksheetTitle, "A1", parser.attendeesDataToMatrix())
+                sheetHandler.applyStandardFormatting(outputID, worksheetTitle, startTimeString)
 
-            gsh.createAndSetWorksheet(outputID, logWorksheetTitle, None)
-            gsh.worksheet.clear()
-            gsh.writeMatrixToCells(outputID, logWorksheetTitle, "A1", parser.meetingResponseToMatrix())
-            gsh.autoResizeCells(outputID, logWorksheetTitle)
+                sheetHandler.createAndSetWorksheet(outputID, logWorksheetTitle, None)
+                sheetHandler.worksheet.clear()
+                sheetHandler.writeMatrixToCells(outputID, logWorksheetTitle, "A1", parser.meetingResponseToMatrix())
+                logWorksheetID = sheetHandler.worksheet.id
+                sheetHandler.autoResizeCells(outputID, logWorksheetID)
 
-
-            currentWorksheetTitles = []
-            # remove the default Sheet1 if it exists
-            for ws in gsh.spreadsheet.worksheets():
-                currentWorksheetTitles.append(ws.title)
-            if "Sheet1" in currentWorksheetTitles:
-                gsh.spreadsheet.del_worksheet(gsh.setWorksheet("Sheet1"))
-            print("Sleeping for 100 seconds to avoid API rate limit")
-            time.sleep(100)
+                currentWorksheetTitles = []
+                # remove the default Sheet1 if it exists
+                for ws in sheetHandler.spreadsheet.worksheets():
+                    currentWorksheetTitles.append(ws.title)
+                if "Sheet1" in currentWorksheetTitles:
+                    sheetHandler.spreadsheet.del_worksheet(gsh.setWorksheet("Sheet1"))
+                print("Sleeping for 100 seconds to avoid API rate limit")
+                time.sleep(100)
+            else:
+                print("No log found for specified date, skipping.")
+            # else:
+            # gsh.writeMatrixToCells(outputID, worksheetTitle, "A1", [["No meeting found on this date."]])
+            # gsh.shareSheetToEmails(outputID, emails)
         else:
-            print("No log found for specified date, skipping.")
-        #else:
-            #gsh.writeMatrixToCells(outputID, worksheetTitle, "A1", [["No meeting found on this date."]])
-        # gsh.shareSheetToEmails(outputID, emails)
+            print(f"{cycleName} does not have class on {dateArray[targetDate.weekday()]}")
+            print("Waiting 6s to avoid Zoom API rate limit")
+            time.sleep(6)
     else:
-        print(f"{cycleName} does not have class on {dateArray[targetDate.weekday()]}")
+        print(f"{cycleName} ended before {endDate.strftime('%M/%D/%Y')}, skipping")
+
+try:
+    if sys.argv[2] == "all":
+        for line in centralData:
+            parseFromCentralSheetRow(line, gsh, z, tdate)
+        # data from sheet for this particular cycle
+    else:
+        try:
+            targetRow = int(sys.argv[2])
+            if 2 <= targetRow < len(centralData) + 2:
+                parseFromCentralSheetRow(centralData[targetRow - 2], gsh, z, tdate)
+            else:
+                print("Please enter a row number that is contained on the central sheet, or 'all'")
+        except:
+            print("Please enter a row number that is contained on the central sheet or 'all'")
 
 
+
+except Exception as e:
+    logging.error("Exception occurred", exc_info=True)
 
 # parser.formatDataForCells
 
