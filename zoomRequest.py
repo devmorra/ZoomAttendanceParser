@@ -24,7 +24,11 @@ class ZoomRequester:
 
     def getMeetingID(self, meetingID):
         url: str = f"{self.base_url}/meetings/{meetingID}"
-
+        query_params = {"show_previous_occurences": True}
+        r: Response = requests.get(url,
+                                   headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"},
+                                   params=query_params)
+        return r
 
 
     def get_meeting_participants(self, meeting_id: str,

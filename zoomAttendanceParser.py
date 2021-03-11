@@ -243,13 +243,14 @@ class Parser:
     def __main__(self):
         pass
 
-    def __init__(self, timeFormat: str, timeZoneOffset, aliasdata: [str]):
+    def __init__(self, timeFormat: str, timeZoneOffset, aliasdata: [str], meetResponse):
         # meetingdata and aliasdata are currently expected to be a list of lines of text, provided from readlines()
         # if this changes to be bulk data I'll have to refactor to have the separating done here or something
         # splitMeetDataToLines(meetingdata)
         # splitAliasDataToLines(aliasdata)
         # or something, whatever
         self.attendees = []
+        self.meetingResponse = meetResponse
         self.unrecognizedAttendees = []
         self.breaks = []
         self.logDate = ''
@@ -268,30 +269,32 @@ class Parser:
         # self.loadMeetingData(meetingdata)
 
 
-    def parseMeetingResponse(self, meetingResponse):
-        meetingData = json.loads(meetingResponse.text)["participants"]
-        for dict in meetingData:
-            alias = dict["name"].lower()
-            # grab only the "HH:MM:SS AM/PM"
-            loginTime = datetime.strptime(dict["join_time"], self.timeFormat)
-            loginTime += self.timezoneOffset
-            logoutTime = datetime.strptime(dict["leave_time"], self.timeFormat)
-            logoutTime += self.timezoneOffset
-            recognizedPair = self.recognizedAlias(alias)  # grabs if the alias is recognized or not and what the a
-            if recognizedPair[0]:
-                self.aliasDictionary[recognizedPair[1]].addTimeFrame(loginTime, logoutTime)
-            else:
-               # track unrecognized alias and its timeframe
-                uAttendee = Attendee(self.timeFormat, self)
-                uAttendee.name = alias
-                if alias not in uAttendee.aliases:
-                    uAttendee.aliases.append(alias)
-                uAttendee.addTimeFrame(loginTime, logoutTime)
-                self.aliasDictionary[alias] = uAttendee
-                self.unrecognizedAttendees.append(uAttendee)
-        arbitraryLogin = meetingData[0]['join_time']  # just grab the first login of the file, after it's been adjusted
-        self.logDate = date.fromisoformat(arbitraryLogin.split("T")[0])  # use date to combine with break time objects
-        # self.logDoW = self.logDate.weekday()
+    def attendeesDataToMatrix(self):
+        matrix = [["Please email any issues to cmorra@perscholas.org"],
+                  ["Log Date", self.logDate.strftime("%m/%d/%y")],
+                  ["Start time", self.startTime.strftime("%H:%M")],
+                  ["Name", "Time in call", "Timeframes in call"]]
+        for a in self.attendees:
+            rowData = [a.name, a.timeInCallToHours()]
+            for tf in a.timeframes:
+                rowData.append(tf.toString())
+            matrix.append(rowData)
+        if len(self.unrecognizedAttendees) > 0:
+            matrix.append([""])
+            matrix.append(["Unrecognized/untracked Aliases in Call", "Time in call", "Timeframes in call"])
+            for ua in self.unrecognizedAttendees:
+                rowData = [ua.name, ua.timeInCallToHours()]
+                for tf in ua.timeframes:
+                    rowData.append(tf.toString())
+                matrix.append(rowData)
+        return matrix
+
+
+    def calculateAttendeesTimeInCall(self):
+        for attendee in self.attendees:
+            attendee.calculateTimeInCall()
+        for attendee in self.unrecognizedAttendees:
+            attendee.calculateTimeInCall()
 
 
     def loadStartEndBreakDict(self, sebDict):
@@ -326,32 +329,43 @@ class Parser:
                 self.aliasDictionary[alias] = a
 
 
-    def calculateAttendeesTimeInCall(self):
-        for attendee in self.attendees:
-            attendee.calculateTimeInCall()
-        for attendee in self.unrecognizedAttendees:
-            attendee.calculateTimeInCall()
+    def meetingResponseToMatrix(self):
+        participantDictionaries = json.loads(self.meetingResponse.text)['participants']
+        returnMatrix = [["Name", "Join time", "Leave time"]]
+        for p in participantDictionaries:
+            name = p['name']
+            joinTime = datetime.strftime(datetime.strptime(p['join_time'], self.timeFormat), "%H:%M")
+            leaveTime = datetime.strftime(datetime.strptime(p['leave_time'], self.timeFormat), "%H:%M")
+            a = [name, joinTime, leaveTime]
+            returnMatrix.append(a)
+        return returnMatrix
 
 
-    def attendeesDataToMatrix(self):
-        matrix = [["Please email any issues to cmorra@perscholas.org"],
-                  ["Log Date", self.logDate.strftime("%m/%d/%y")],
-                  ["Start time", self.startTime.strftime("%H:%M")],
-                  ["Name", "Time in call", "Timeframes in call"]]
-        for a in self.attendees:
-            rowData = [a.name, a.timeInCallToHours()]
-            for tf in a.timeframes:
-                rowData.append(tf.toString())
-            matrix.append(rowData)
-        if len(self.unrecognizedAttendees) > 0:
-            matrix.append([""])
-            matrix.append(["Unrecognized/untracked Aliases in Call", "Time in call", "Timeframes in call"])
-            for ua in self.unrecognizedAttendees:
-                rowData = [ua.name, ua.timeInCallToHours()]
-                for tf in ua.timeframes:
-                    rowData.append(tf.toString())
-                matrix.append(rowData)
-        return matrix
+    def parseMeetingResponse(self):
+        meetingData = json.loads(self.meetingResponse.text)["participants"]
+        for dict in meetingData:
+            alias = dict["name"].lower()
+            # grab only the "HH:MM:SS AM/PM"
+            loginTime = datetime.strptime(dict["join_time"], self.timeFormat)
+            loginTime += self.timezoneOffset
+            logoutTime = datetime.strptime(dict["leave_time"], self.timeFormat)
+            logoutTime += self.timezoneOffset
+            recognizedPair = self.recognizedAlias(alias)  # grabs if the alias is recognized or not and what the a
+            if recognizedPair[0]:
+                self.aliasDictionary[recognizedPair[1]].addTimeFrame(loginTime, logoutTime)
+            else:
+               # track unrecognized alias and its timeframe
+                uAttendee = Attendee(self.timeFormat, self)
+                uAttendee.name = alias
+                if alias not in uAttendee.aliases:
+                    uAttendee.aliases.append(alias)
+                uAttendee.addTimeFrame(loginTime, logoutTime)
+                self.aliasDictionary[alias] = uAttendee
+                self.unrecognizedAttendees.append(uAttendee)
+        arbitraryLogin = meetingData[0]['join_time']  # just grab the first login of the file, after it's been adjusted
+        self.logDate = date.fromisoformat(arbitraryLogin.split("T")[0])  # use date to combine with break time objects
+        # self.logDoW = self.logDate.weekday()
+
 
     def recognizedAlias(self, alias):
         # returns if a partial alias is on the list of attendees and the corresponding full alias
