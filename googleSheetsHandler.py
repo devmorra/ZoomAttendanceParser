@@ -3,7 +3,6 @@ import os.path
 import gspread
 import gspread_formatting as gsf
 from gspread_formatting import *
-import numpy as np
 from datetime import date
 # from googleapiclient import discovery
 # from google.oauth2 import service_account

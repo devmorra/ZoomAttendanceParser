@@ -2,7 +2,6 @@ import sys
 import json
 import copy
 import datetime
-import numpy
 from datetime import datetime
 from datetime import timedelta
 from datetime import date

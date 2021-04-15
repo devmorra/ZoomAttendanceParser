@@ -7,7 +7,6 @@ import datetime
 import sys
 import time
 import logging
-import json
 
 from timeit import default_timer as timer
 
@@ -41,6 +40,7 @@ def endOfWeekString(date):
 
 
 start = timer()
+logFilePath = f"logs/"
 logger = logging.getLogger("Main logger")
 timeFormat = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -48,6 +48,7 @@ timeFormat = "%Y-%m-%dT%H:%M:%SZ"
 secretContents = open(os.path.abspath("zoomSecrets.txt")).read().split(",")
 z = ZoomRequester(secretContents[0], secretContents[1])
 ztoken = z.generate_jwt_token()
+
 
 
 
@@ -107,6 +108,8 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
             outputTitle = f"{startOfWeekString(targetDate)} - {endOfWeekString(targetDate)} {cycleName} Attendance"
             aliasData = sheetHandler.getAttendeesAndAliasData(spreadsheetID)
             meetingID = sheetHandler.getCellData(spreadsheetID, "Settings", "A2").replace(" ", "")
+            # pastMeetings = z.getPastMeetings(meetingID)
+            # print(pastMeetings)
             meetResponse = zoomRequester.get_meeting_participants(meetingID)
             timeZoneOffset = int(sheetHandler.getCellData(spreadsheetID, "Settings", "C9"))
             parser = Parser(timeFormat, timeZoneOffset, aliasData, meetResponse)
@@ -151,6 +154,7 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
             time.sleep(6)
     else:
         print(f"{cycleName} ended before {endDate.strftime('%M/%D/%Y')}, skipping")
+
 
 try:
     if sys.argv[2] == "all":

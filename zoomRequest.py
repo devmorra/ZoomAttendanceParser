@@ -45,6 +45,13 @@ class ZoomRequester:
 
         return r
 
+
+    def getPastMeetings(self, meetingID):
+        url: str = f"{self.base_url}/past_meetings/{meetingID}/instances"
+        r: Response = requests.get(url,
+                                   headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"})
+        return r
+
     def generate_jwt_token(self) -> bytes:
         iat = int(time.time())
 
