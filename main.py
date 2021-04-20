@@ -92,33 +92,38 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
     paddedEndDate = paddedEndDate[:-1]
     endDate = datetime.datetime.strptime(paddedEndDate, "%m/%d/%Y")
     # datetime.datetime.strptime(rowdata[5],)
-    print(targetDate)
-    print(endDate)
+    print(f"Looking for meeting for {cycleName} on {targetDate}")
     daysRunning = rowdata[6]
-
     if targetDate < endDate:
-    # today = datetime.datetime.today()
-    # todayIndex = datetime.datetime.today().weekday()
-    # todaysWeekday = today.strftime("%A")  # convert datetime number to string of the weekday
         targetDateWeekday = targetDate.strftime("%A")
-
-        # if todaysWeekday in daysRunning:  # see if the class is run on that day
         if targetDateWeekday in daysRunning:
             # set desired spreadsheet name to the given week + the cycle name + Attendance
             outputTitle = f"{startOfWeekString(targetDate)} - {endOfWeekString(targetDate)} {cycleName} Attendance"
             aliasData = sheetHandler.getAttendeesAndAliasData(spreadsheetID)
             meetingID = sheetHandler.getCellData(spreadsheetID, "Settings", "A2").replace(" ", "")
-            # pastMeetings = z.getPastMeetings(meetingID)
-            # print(pastMeetings)
-            participantData = zoomRequester.get_meeting_participants(meetingID)
             timeZoneOffset = int(sheetHandler.getCellData(spreadsheetID, "Settings", "C9"))
-            parser = Parser(timeFormat, timeZoneOffset, aliasData, participantData)
-            parser.parseMeetingResponse()
+            offsetDelta = datetime.timedelta(hours=timeZoneOffset)
 
-            sebDict = sheetHandler.getStartEndBreakDict(spreadsheetID, parser.logDate)
-            parser.loadStartEndBreakDict(sebDict)
-            parser.calculateAttendeesTimeInCall()
-            if parser.logDate == targetDate.date():
+            pastMeetings = zoomRequester.getPastMeetings(meetingID)
+            meetingsToParse = []
+            for meeting in pastMeetings:
+                meeting['date_time'] = datetime.datetime.strptime(meeting['start_time'], timeFormat)
+                meeting['date'] = (meeting['date_time'] + offsetDelta).date()
+                if meeting['date'] == targetDate.date():
+                    meetingsToParse.append(meeting["uuid"])
+
+            if len(meetingsToParse) >= 1:
+                aggregateParticipantData = []
+                for mID in meetingsToParse:
+                    participantData = zoomRequester.get_meeting_participants(mID)
+                    for pdata in participantData:
+                        aggregateParticipantData.append(pdata)
+                parser = Parser(timeFormat, timeZoneOffset, aliasData, aggregateParticipantData)
+                parser.parseMeetingResponse()
+
+                sebDict = sheetHandler.getStartEndBreakDict(spreadsheetID, parser.logDate)
+                parser.loadStartEndBreakDict(sebDict)
+                parser.calculateAttendeesTimeInCall()
                 startTimeString = parser.startTime.strftime("%H:%M")
                 sheetHandler.createAndSetSpreadsheet(folderID, outputTitle)
                 outputID = sheetHandler.spreadsheet.id
@@ -128,7 +133,6 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
                 sheetHandler.worksheet.clear()
                 sheetHandler.writeMatrixToCells(outputID, worksheetTitle, "A1", parser.attendeesDataToMatrix())
                 sheetHandler.applyStandardFormatting(outputID, worksheetTitle, startTimeString)
-
                 sheetHandler.createAndSetWorksheet(outputID, logWorksheetTitle, None)
                 sheetHandler.worksheet.clear()
                 sheetHandler.writeMatrixToCells(outputID, logWorksheetTitle, "A1", parser.meetingResponseToMatrix())

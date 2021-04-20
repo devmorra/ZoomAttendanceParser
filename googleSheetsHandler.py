@@ -169,14 +169,24 @@ class GoogleSheetsHandler:
         targetRange = f"{dayColumnList[dayOfWeek]}{startRow}:{dayColumnList[dayOfWeek]}{endRow}"
         startEndBreakData = self.getRangeData(spreadsheetID, "Settings", targetRange)
         startEndBreakDict = {}
-        startEndBreakDict['callStart'] = startEndBreakData[0][0]
-        startEndBreakDict['callEnd'] = startEndBreakData[1][0]
-        startEndBreakDict['b1start'] = startEndBreakData[2][0]
-        startEndBreakDict['b1end'] = startEndBreakData[3][0]
-        startEndBreakDict['b2start'] = startEndBreakData[4][0]
-        startEndBreakDict['b2end'] = startEndBreakData[5][0]
-        startEndBreakDict['b3start'] = startEndBreakData[6][0]
-        startEndBreakDict['b3end'] = startEndBreakData[7][0]
+        if startEndBreakData == []:
+            startEndBreakDict['callStart'] = '00:00'
+            startEndBreakDict['callEnd'] = '23:59'
+            startEndBreakDict['b1start'] = '00:00'
+            startEndBreakDict['b1end'] = '00:00'
+            startEndBreakDict['b2start'] = '00:00'
+            startEndBreakDict['b2end'] = '00:00'
+            startEndBreakDict['b3start'] ='00:00'
+            startEndBreakDict['b3end'] = '00:00'
+        else:
+            startEndBreakDict['callStart'] = startEndBreakData[0][0]
+            startEndBreakDict['callEnd'] = startEndBreakData[1][0]
+            startEndBreakDict['b1start'] = startEndBreakData[2][0]
+            startEndBreakDict['b1end'] = startEndBreakData[3][0]
+            startEndBreakDict['b2start'] = startEndBreakData[4][0]
+            startEndBreakDict['b2end'] = startEndBreakData[5][0]
+            startEndBreakDict['b3start'] = startEndBreakData[6][0]
+            startEndBreakDict['b3end'] = startEndBreakData[7][0]
         for key in startEndBreakDict:
             # zero-pad times that start with single digit hours
             if len(startEndBreakDict[key]) < 5:
