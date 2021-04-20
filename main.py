@@ -110,9 +110,9 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
             meetingID = sheetHandler.getCellData(spreadsheetID, "Settings", "A2").replace(" ", "")
             # pastMeetings = z.getPastMeetings(meetingID)
             # print(pastMeetings)
-            meetResponse = zoomRequester.get_meeting_participants(meetingID)
+            participantData = zoomRequester.get_meeting_participants(meetingID)
             timeZoneOffset = int(sheetHandler.getCellData(spreadsheetID, "Settings", "C9"))
-            parser = Parser(timeFormat, timeZoneOffset, aliasData, meetResponse)
+            parser = Parser(timeFormat, timeZoneOffset, aliasData, participantData)
             parser.parseMeetingResponse()
 
             sebDict = sheetHandler.getStartEndBreakDict(spreadsheetID, parser.logDate)

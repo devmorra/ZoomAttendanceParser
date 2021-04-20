@@ -242,21 +242,21 @@ class Parser:
     def __main__(self):
         pass
 
-    def __init__(self, timeFormat: str, timeZoneOffset, aliasdata: [str], meetResponse):
+    def __init__(self, timeFormat: str, timeZoneOffset, aliasdata: [str], participantData):
         # meetingdata and aliasdata are currently expected to be a list of lines of text, provided from readlines()
         # if this changes to be bulk data I'll have to refactor to have the separating done here or something
         # splitMeetDataToLines(meetingdata)
         # splitAliasDataToLines(aliasdata)
         # or something, whatever
         self.attendees = []
-        self.meetingResponse = meetResponse
+        self.participantData = participantData
         self.unrecognizedAttendees = []
         self.breaks = []
-        self.logDate = ''
+        arbitraryLogin = self.participantData[0]['join_time']  # just grab the first login of the file, after it's been adjusted
+        self.logDate = date.fromisoformat(arbitraryLogin.split("T")[0]) # use date to combine with break time objects
         self.timeFormat = timeFormat
         self.timezoneOffset = timedelta(hours=timeZoneOffset)
         self.aliasDictionary = {}
-
         self.lateArrivalLeniency = 0
         self.earlyLeaveLeniency = 0
         self.breakReturnLeniency = 0
@@ -329,9 +329,8 @@ class Parser:
 
 
     def meetingResponseToMatrix(self):
-        participantDictionaries = json.loads(self.meetingResponse.text)['participants']
         returnMatrix = [["Name", "Join time", "Leave time"]]
-        for p in participantDictionaries:
+        for p in self.participantData:
             name = p['name']
             joinTime = datetime.strftime(datetime.strptime(p['join_time'], self.timeFormat) + self.timezoneOffset, "%H:%M")
             leaveTime = datetime.strftime(datetime.strptime(p['leave_time'], self.timeFormat)+ self.timezoneOffset, "%H:%M")
@@ -341,8 +340,7 @@ class Parser:
 
 
     def parseMeetingResponse(self):
-        meetingData = json.loads(self.meetingResponse.text)["participants"]
-        for dict in meetingData:
+        for dict in self.participantData:
             alias = dict["name"].lower()
             # grab only the "HH:MM:SS AM/PM"
             loginTime = datetime.strptime(dict["join_time"], self.timeFormat)
@@ -361,8 +359,7 @@ class Parser:
                 uAttendee.addTimeFrame(loginTime, logoutTime)
                 self.aliasDictionary[alias] = uAttendee
                 self.unrecognizedAttendees.append(uAttendee)
-        arbitraryLogin = meetingData[0]['join_time']  # just grab the first login of the file, after it's been adjusted
-        self.logDate = date.fromisoformat(arbitraryLogin.split("T")[0])  # use date to combine with break time objects
+
         # self.logDoW = self.logDate.weekday()
 
 

@@ -5,6 +5,7 @@ from typing import Optional, Dict, Union, Any
 import requests
 from authlib.jose import jwt
 from requests import Response
+import json
 
 
 class ZoomRequester:
@@ -42,15 +43,16 @@ class ZoomRequester:
         r: Response = requests.get(url,
                                    headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"},
                                    params=query_params)
-
-        return r
+        participants = json.loads(r.text)['participants']
+        return participants
 
 
     def getPastMeetings(self, meetingID):
         url: str = f"{self.base_url}/past_meetings/{meetingID}/instances"
         r: Response = requests.get(url,
                                    headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"})
-        return r
+        pastMeetings = json.loads(r.text)['meetings']
+        return pastMeetings
 
     def generate_jwt_token(self) -> bytes:
         iat = int(time.time())
