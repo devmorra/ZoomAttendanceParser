@@ -115,6 +115,7 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
             if len(meetingsToParse) >= 1:
                 aggregateParticipantData = []
                 for mID in meetingsToParse:
+                    print(f"Meeting uuid:'{mID}' found on {targetDate}")
                     participantData = zoomRequester.get_meeting_participants(mID)
                     for pdata in participantData:
                         aggregateParticipantData.append(pdata)
