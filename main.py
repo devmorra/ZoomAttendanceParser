@@ -53,7 +53,7 @@ ztoken = z.generate_jwt_token()
 
 
 with open (os.path.abspath("centralSheetID.txt"), "r") as f:
-    centralSheetID = f.read()
+    centralSheetID = f.read().replace("\n", "")
 
 gsh = GoogleSheetsHandler()
 centralData = gsh.getMeetingsFromCentralSheet(centralSheetID)
@@ -119,6 +119,7 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
                     participantData = zoomRequester.get_meeting_participants(mID)
                     for pdata in participantData:
                         aggregateParticipantData.append(pdata)
+                aggregateParticipantData.sort(key=lambda i: i['join_time'])
                 parser = Parser(timeFormat, timeZoneOffset, aliasData, aggregateParticipantData)
                 parser.parseMeetingResponse()
 

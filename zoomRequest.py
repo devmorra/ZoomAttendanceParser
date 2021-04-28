@@ -5,6 +5,7 @@ from typing import Optional, Dict, Union, Any
 import requests
 from authlib.jose import jwt
 from requests import Response
+from urllib.parse import quote
 import json
 
 
@@ -24,6 +25,7 @@ class ZoomRequester:
 
 
     def getMeetingID(self, meetingID):
+        meetingID = quote(quote(meetingID, safe=''),safe='')
         url: str = f"{self.base_url}/meetings/{meetingID}"
         query_params = {"show_previous_occurences": True}
         r: Response = requests.get(url,
@@ -32,10 +34,11 @@ class ZoomRequester:
         return r
 
 
-    def get_meeting_participants(self, meeting_id: str,
+    def get_meeting_participants(self, meetingID: str,
                                  next_page_token: Optional[str] = None) -> Response:
         # colons are variable annotations, sort of like giving an expected typing to the var
-        url: str = f"{self.reports_url}/{meeting_id}/participants"
+        meetingID = quote(quote(meetingID, safe=''),safe='')
+        url: str = f"{self.reports_url}/{meetingID}/participants"
         query_params: Dict[str, Union[int, str]] = {"page_size": 300}
         if next_page_token:
             query_params.update({"next_page_token": next_page_token})
@@ -48,6 +51,7 @@ class ZoomRequester:
 
 
     def getPastMeetings(self, meetingID):
+        meetingID = quote(quote(meetingID, safe=''),safe='')
         url: str = f"{self.base_url}/past_meetings/{meetingID}/instances"
         r: Response = requests.get(url,
                                    headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"})

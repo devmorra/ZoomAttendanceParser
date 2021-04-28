@@ -170,14 +170,15 @@ class GoogleSheetsHandler:
         startEndBreakData = self.getRangeData(spreadsheetID, "Settings", targetRange)
         startEndBreakDict = {}
         if startEndBreakData == []:
+            print("No breaks specified, using dummy values")
             startEndBreakDict['callStart'] = '00:00'
             startEndBreakDict['callEnd'] = '23:59'
             startEndBreakDict['b1start'] = '00:00'
-            startEndBreakDict['b1end'] = '00:00'
-            startEndBreakDict['b2start'] = '00:00'
-            startEndBreakDict['b2end'] = '00:00'
-            startEndBreakDict['b3start'] ='00:00'
-            startEndBreakDict['b3end'] = '00:00'
+            startEndBreakDict['b1end'] = '00:01'
+            startEndBreakDict['b2start'] = '00:02'
+            startEndBreakDict['b2end'] = '00:03'
+            startEndBreakDict['b3start'] ='00:04'
+            startEndBreakDict['b3end'] = '00:05'
         else:
             startEndBreakDict['callStart'] = startEndBreakData[0][0]
             startEndBreakDict['callEnd'] = startEndBreakData[1][0]
@@ -237,6 +238,7 @@ class GoogleSheetsHandler:
 
 
     def setSpreadsheetAndWorksheet(self, spreadsheetID, worksheetTitle):
+        print(f"Setting spreadsheet to {spreadsheetID} and worksheet to {worksheetTitle}")
         self.setSpreadsheet(spreadsheetID)
         self.setWorksheet(worksheetTitle)
 
