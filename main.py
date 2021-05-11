@@ -20,6 +20,7 @@ def startOfWeek(date):
     weekStart = date + delta
     return weekStart
 
+
 def endOfWeek(date):
     dayNum = date.weekday()
     delta = datetime.timedelta(days=6 - dayNum)
@@ -39,20 +40,24 @@ def endOfWeekString(date):
     return endString
 
 
+def pathFromBaseDir(path):
+    return os.path.abspath(os.path.dirname(__file__)) + path
+
 start = timer()
+# baseDirectoryPath = os.path.abspath(os.path.dirname(__file__))
 logFilePath = f"logs/"
 logger = logging.getLogger("Main logger")
 timeFormat = "%Y-%m-%dT%H:%M:%SZ"
 
 
-secretContents = open(os.path.abspath("zoomSecrets.txt")).read().split(",")
+secretContents = open(pathFromBaseDir("/zoomSecrets.txt")).read().split(",")
 z = ZoomRequester(secretContents[0], secretContents[1])
 ztoken = z.generate_jwt_token()
 
 
 
 
-with open (os.path.abspath("centralSheetID.txt"), "r") as f:
+with open (pathFromBaseDir("centralSheetID.txt"), "r") as f:
     centralSheetID = f.read().replace("\n", "")
 
 gsh = GoogleSheetsHandler()
@@ -159,7 +164,7 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
             print("Waiting 6s to avoid Zoom API rate limit")
             time.sleep(6)
     else:
-        print(f"{cycleName} ended before {endDate.strftime('%M/%D/%Y')}, skipping")
+        print(f"{cycleName} ended before {endDate.strftime('%D')}, skipping")
 
 
 try:
