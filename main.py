@@ -60,7 +60,7 @@ ztoken = z.generate_jwt_token()
 with open (pathFromBaseDir("/centralSheetID.txt"), "r") as f:
     centralSheetID = f.read().replace("\n", "")
 
-gsh = GoogleSheetsHandler()
+gsh = GoogleSheetsHandler(pathFromBaseDir('/client_secrets.json'))
 centralData = gsh.getMeetingsFromCentralSheet(centralSheetID)
 try:
     print(sys.argv[1], sys.argv[2])

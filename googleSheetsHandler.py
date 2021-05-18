@@ -8,10 +8,9 @@ from datetime import date
 # from google.oauth2 import service_account
 import time
 from timeit import default_timer as timer
-
 class GoogleSheetsHandler:
 
-    def __init__(self):
+    def __init__(self, secretsFilePath):
         start = timer()
         self.token = None
         # self.SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -19,7 +18,7 @@ class GoogleSheetsHandler:
         # self.pathToServiceAccountFile =
         # self.credentials = self.getCredentials(self.pathToServiceAccountFile)
         # self.service = discovery.build('sheets', 'v4', credentials=self.credentials)
-        self.gc = gspread.service_account(filename=os.path.abspath('client_secrets.json'))
+        self.gc = gspread.service_account(filename=secretsFilePath)
         # self.getAttendeesAndAliasData(self.spreadSheetID)
         self.spreadsheet = None
         self.worksheet = None
