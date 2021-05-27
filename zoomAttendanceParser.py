@@ -187,7 +187,7 @@ class Attendee:
             f2end = f2.end
             tdelta = f2start - f1end
             # if f2start < f1end:  # if the timeframes overlap
-            if tdelta < timedelta(minutes=1):  # if gap between previous logout/login is <1m, merge them
+            if tdelta < timedelta(minutes=2):  # if gap between previous logout/login is <2m, merge them
                 # print(f"Merged \n{f1.start.strftime('%H:%M:%S')} - {f1.end.strftime('%H:%M:%S')} with
                 # \n{f2.start.strftime('%H:%M:%S')} - {f2.end.strftime('%H:%M:%S')}",end=" ")
                 if f2end > f1end:
