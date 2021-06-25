@@ -33,6 +33,7 @@ class GoogleSheetsHandler:
 
     def applyStandardFormatting(self, spreadsheetID, worksheetTitle, startTimeString):
         self.setSpreadsheetAndWorksheet(spreadsheetID, worksheetTitle)
+        # timeframes that are during breaks are not counted and so are greyed out in the spreadsheet
         breakConditionRule = ConditionalFormatRule(
             ranges=[GridRange.from_a1_range('C:Z', self.worksheet)],
             booleanRule=BooleanRule(
@@ -40,6 +41,7 @@ class GoogleSheetsHandler:
                 format=gsf.cellFormat(backgroundColor=gsf.color(0.70, 0.70, 0.70))  # should color break cells grey
             )
         )
+        # if a tracked person has 0:00 time in the call, mark the box red
         absentConditionRule = ConditionalFormatRule(
             ranges=[GridRange.from_a1_range('B5:B', self.worksheet)],
             booleanRule=BooleanRule(
@@ -47,18 +49,19 @@ class GoogleSheetsHandler:
                 format=gsf.cellFormat(backgroundColor=gsf.color(1, 0, 0))  # make them an angry red
             )
         )
+        # if there's no timeframe for the first one then keep it white instead of yellow
+        # keeps things cleaner looking
         emptyFirstTimeframeRule = ConditionalFormatRule(
             ranges=[GridRange.from_a1_range('C5:C', self.worksheet)],
             booleanRule=BooleanRule(
-                # if there's no timeframe for the first one then keep it white instead of yellow
                 condition=BooleanCondition("BLANK"),
                 format=gsf.cellFormat(backgroundColor=gsf.color(1, 1, 1))  # white
             )
         )
+        # If the first timeframe doesn't have the start time in it (joined after the start time), mark it yellow
         lateConditionRule = ConditionalFormatRule(
             ranges=[GridRange.from_a1_range('C5:C', self.worksheet)],
             booleanRule=BooleanRule(
-                # If the first timeframe doesn't have the start time in it, mark it yellow
                 condition=BooleanCondition("TEXT_NOT_CONTAINS", [startTimeString]),
                 format=gsf.cellFormat(backgroundColor=gsf.color(1, 1, 0))  # yellow
             )
@@ -143,7 +146,7 @@ class GoogleSheetsHandler:
         nameAndAliasRange = f"{nameAliasMin}:{nameAliasMax}"
         nameAndAliasData = self.worksheet.get(nameAndAliasRange)
         for entry in nameAndAliasData:
-            entry.pop(1)  # remove the number of aliases
+            entry.pop(1)  # remove the number of aliases to keep the relevant data
         return nameAndAliasData
 
 
@@ -243,6 +246,7 @@ class GoogleSheetsHandler:
 
 
     def shareSheetToEmails(self, spreadsheetID, emails):
+        # this shouldn't be necessary since files should be in shared folders, and thus inherit their permissions
         self.setSpreadsheet(spreadsheetID)
         for email in emails:
             self.spreadsheet.share(email, "user", "writer", "True")

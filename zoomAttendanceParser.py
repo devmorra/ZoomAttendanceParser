@@ -208,6 +208,17 @@ class Attendee:
 
 
     def trimTFsToStartAndEnd(self, start, end):
+        i = 0
+        # remove timeframes that are entirely before or entirely after the start and end times
+        while i < len(self.timeframes):
+            if self.timeframes[i].end < start:
+                self.timeframes.pop(i)
+            elif self.timeframes[i].start > end:
+                self.timeframes.pop(i)
+            else:
+                i += 1
+
+
         if self.timeframes[0].start < start:
             self.timeframes[0].start = start
         if self.timeframes[len(self.timeframes) - 1].end > end:
