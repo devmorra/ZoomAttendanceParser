@@ -219,18 +219,19 @@ class Attendee:
                 i += 1
 
 
-        if self.timeframes[0].start < start:
-            self.timeframes[0].start = start
-        if self.timeframes[len(self.timeframes) - 1].end > end:
-            self.timeframes[len(self.timeframes) - 1].end = end
+        if len(self.timeframes) > 0:
+            if self.timeframes[0].start < start:
+                self.timeframes[0].start = start
+            if self.timeframes[len(self.timeframes) - 1].end > end:
+                self.timeframes[len(self.timeframes) - 1].end = end
 
     def calculateTimeInCall(self):
+        self.sortTimeFrames()
+        # self.timeframescopy = copy.deepcopy(self.timeframes)  # debug
+        self.mergeOverlappingTimeframes()
+        self.removeBreakOverlaps(self.parser.breaks)
+        self.trimTFsToStartAndEnd(self.parser.startTime, self.parser.endTime)
         if len(self.timeframes) > 0:
-            self.sortTimeFrames()
-            # self.timeframescopy = copy.deepcopy(self.timeframes)  # debug
-            self.mergeOverlappingTimeframes()
-            self.removeBreakOverlaps(self.parser.breaks)
-            self.trimTFsToStartAndEnd(self.parser.startTime, self.parser.endTime)
             self.firstLogin = self.timeframes[0].start
             self.lastLogoff = self.timeframes[len(self.timeframes) - 1].end
 
