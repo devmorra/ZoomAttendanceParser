@@ -7,6 +7,7 @@ import datetime
 import sys
 import time
 import logging
+import traceback
 
 from timeit import default_timer as timer
 
@@ -66,7 +67,7 @@ try:
     print(sys.argv[1], sys.argv[2])
 except:
     print("Please provide the date or 'today' and either 'central' or the number of the row that should be parsed from the central sheet")
-
+    traceback.print_exc()
 if sys.argv[1] == "today":
     tdate = datetime.datetime.today()
 else:
@@ -74,6 +75,7 @@ else:
         tdate = datetime.datetime.strptime(sys.argv[1], "%m-%d-%y")
     except:
         print("Invalid date format provided.\n Please use MM-DD-YY with zero-padding")
+        traceback.print_exc()
         exit()
 
 dateArray = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -121,7 +123,8 @@ def parseFromCentralSheetRow(rowdata, sheetHandler, zoomRequester, targetDate):
                 aggregateParticipantData = []
                 for mID in meetingsToParse:
                     print(f"Meeting uuid:'{mID}' found on {targetDate}")
-                    participantData = zoomRequester.get_meeting_participants(mID)
+                    participantData = zoomRequester.getParticipantsList(mID)
+                    #participantData = zoomRequester.get_meeting_participants(mID)
                     for pdata in participantData:
                         aggregateParticipantData.append(pdata)
                 aggregateParticipantData.sort(key=lambda i: i['join_time'])
@@ -181,6 +184,7 @@ try:
                 print("Please enter a row number that is contained on the central sheet, or 'all'")
         except:
             print("Please enter a row number that is contained on the central sheet or 'all'")
+            traceback.print_exc()
 
 
 

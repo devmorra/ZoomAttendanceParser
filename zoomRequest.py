@@ -34,7 +34,7 @@ class ZoomRequester:
         return r
 
 
-    def get_meeting_participants(self, meetingID: str,
+    def get_meeting_participants_response(self, meetingID: str,
                                  next_page_token: Optional[str] = None) -> Response:
         # colons are variable annotations, sort of like giving an expected typing to the var
         meetingID = quote(quote(meetingID, safe=''),safe='')
@@ -46,9 +46,28 @@ class ZoomRequester:
         r: Response = requests.get(url,
                                    headers={"Authorization": f"Bearer {self.jwt_token.decode('utf-8')}"},
                                    params=query_params)
-        participants = json.loads(r.text)['participants']
-        return participants
 
+        return r
+        # rdict = json.loads(r.text)
+        # participants = rdict['participants']
+        # while rdict['next_page_token'] != '':
+        #     participants += self.get_meeting_participants(meetingID, rdict['next_page_token'])
+        #
+        # return participants
+
+
+    def getParticipantsList(self, meetingID):
+        participants = []
+        response = self.get_meeting_participants_response(meetingID)
+        rdict = json.loads(response.text)
+        participants += rdict['participants']
+        while rdict['next_page_token'] != '':
+            response = self.get_meeting_participants_response(meetingID, next_page_token=rdict['next_page_token'])
+            rdict = json.loads(response.text)
+            participants += rdict['participants']
+            time.sleep(6.1)
+            print("Sleeping for 6 seconds to avoid Zoom API limit")
+        return participants
 
     def getPastMeetings(self, meetingID):
         meetingID = quote(quote(meetingID, safe=''),safe='')
