@@ -1,7 +1,7 @@
-#Zoom Attendance Parser
+# Zoom Attendance Parser
 Tool for taking Zoom meeting attendance. Configured via google sheets + some local files and outputs data to google sheets.
 
-#Requires:
+# Requires:
 * Python 3+ (tested on 3.8)
 * [Zoom JWT Credentials](https://marketplace.zoom.us/docs/guides/build/jwt-app)
 * Zoom Api permissions
@@ -11,12 +11,12 @@ Tool for taking Zoom meeting attendance. Configured via google sheets + some loc
 * [Google Service Account Credentials](https://developers.google.com/identity/protocols/oauth2/service-account#python)
     * [see this page for walkthrough of what this particular account will need](https://medium.com/swlh/how-i-automate-my-church-organisations-zoom-meeting-attendance-reporting-with-python-419dfe7da58c)
     
-#Setup
+# Setup
 * Install Python
 * Install the necessary pip packages from requirements.txt
 * Create a file named "zoomSecrets.txt" in the folder with main.py and place the Zoom JWT API key and API secret inside it on a single line, separated by a comma with no spaces
 
-[Zoom Credentials](readme%20images/ZoomCredentials.png)
+![Zoom Credentials](readme%20images/ZoomCredentials.png)
 * Place the google service account .json key information you downloaded [(see instructions)](https://medium.com/swlh/how-i-automate-my-church-organisations-zoom-meeting-attendance-reporting-with-python-419dfe7da58c) in the same folder as main.py
 and rename it client_secrets.json
 * Make a copy of [this central spreadsheet](https://docs.google.com/spreadsheets/d/1nAJzI-ns52FCqaCM_WD5v9XTjSIrH0lc2JkpSf_GWUk/edit#gid=0)
@@ -41,8 +41,8 @@ the ID of the filled out settings spreadsheet, the date to stop tracking the mee
  and the days of the week to track the meeting on.
  
  
- #Usage
- main.py takes 2 command arguments
+ # Usage
+ main.py takes 2 command line arguments
  1. The date in MM-DD-YY format
  2. The row of the central sheet to grab data for, or "all"
  
@@ -51,7 +51,7 @@ the ID of the filled out settings spreadsheet, the date to stop tracking the mee
  I have mine set up on a Raspberry Pi that runs a cron job every day at 8PM and saves the output to a log file
  ![](readme%20images/Cronjob.png)
  
- #Sample output
+ # Sample output
  Every new week gets its own google sheet created automatically. They will automatically be shared with whoever has access to the shared folder they are in
  ![](readme%20images/folderOutput.png)
  
